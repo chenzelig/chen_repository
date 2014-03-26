@@ -1,41 +1,41 @@
 ---------------------------------------------------------
 -----------------------DROP TABLES-----------------------
 ---------------------------------------------------------
-DROP TABLE ATM_GM_ModelIndicatorValues
-DROP TABLE ATM_GM_IndicatorLevelInstances
-DROP TABLE ATM_GM_IndicatorLevels
-DROP TABLE ATM_GM_ModelIndicators
-DROP TABLE ATM_GM_Indicators
-DROP TABLE ATM_GM_ModelEvaluationResults
-DROP TABLE ATM_GM_ModelEvaluation
-DROP TABLE ATM_GM_EvaluationMeasures
-DROP TABLE ATM_GM_DE_DataSource
-DROP TABLE ATM_GM_DE_Connections
-DROP TABLE ATM_GM_Remodeling
-DROP TABLE ATM_GM_ModelingParameters
-DROP TABLE ATM_GM_ModelingFeatures
-DROP TABLE ATM_GM_Models
-DROP TABLE ATM_GM_ModelGroups
-DROP TABLE ATM_GM_Features
-DROP TABLE ATM_GM_Parameters
-DROP TABLE ATM_GM_Solutions
+DROP TABLE R_ATM_GM_ModelIndicatorValues
+DROP TABLE R_ATM_GM_IndicatorLevelInstances --?
+DROP TABLE D_ATM_GM_IndicatorLevels
+DROP TABLE F_ATM_GM_ModelIndicators
+DROP TABLE D_ATM_GM_Indicators
+DROP TABLE R_ATM_GM_ModelEvaluationResults
+DROP TABLE F_ATM_GM_ModelEvaluation
+DROP TABLE D_ATM_GM_EvaluationMeasures
+DROP TABLE D_ATM_GM_DE_DataSource
+DROP TABLE D_ATM_GM_DE_Connections
+DROP TABLE R_ATM_GM_Remodeling
+DROP TABLE F_ATM_GM_ModelingParameters
+DROP TABLE F_ATM_GM_ModelingFeatures
+DROP TABLE D_ATM_GM_Models
+DROP TABLE D_ATM_GM_ModelGroups
+DROP TABLE D_ATM_GM_Features
+DROP TABLE D_ATM_GM_Parameters
+DROP TABLE D_ATM_GM_Solutions
 
 --------------------------------------------------------------------------------------------
 -----------------------------------------Modeling Tables------------------------------------
 --------------------------------------------------------------------------------------------
 
-CREATE TABLE ATM_GM_Solutions (
+CREATE TABLE D_ATM_GM_Solutions (
 SolutionID int NOT NULL PRIMARY KEY,
 SolutionDescription varchar(500) NOT NULL
 )
 
-CREATE TABLE ATM_GM_Parameters (
+CREATE TABLE D_ATM_GM_Parameters (
 ParameterID int NOT NULL PRIMARY KEY,
 ParameterDesc varchar(500) NOT NULL,
 DefaultValue varchar(500) NOT NULL
 )
 
-CREATE TABLE ATM_GM_Features (
+CREATE TABLE D_ATM_GM_Features (
 FeatureID int NOT NULL,
 SolutionID int NOT NULL FOREIGN KEY REFERENCES ATM_GM_Solutions(SolutionID),
 Test_Name varchar(250) NOT NULL,
@@ -47,7 +47,7 @@ XMLTestCaption xml NOT NULL
 CONSTRAINT PK_ATM_GM_Features PRIMARY KEY (FeatureID,SolutionID)
 ) ON UPS_SolutionID_PartitionScheme(SolutionID)
 
-CREATE TABLE ATM_GM_ModelGroups (
+CREATE TABLE D_ATM_GM_ModelGroups (
 SolutionID int NOT NULL,
 ModelGroupID int NOT NULL,
 ModelGroupDescription varchar(500) NOT NULL,
@@ -55,7 +55,7 @@ PreStep varchar(max) NULL  ----------CHECK DATATYPE!!!
 CONSTRAINT PK_ATM_GM_ModelGroups PRIMARY KEY (SolutionID,ModelGroupID)
 ) ON UPS_SolutionID_PartitionScheme(SolutionID)
 
-CREATE TABLE ATM_GM_Models (
+CREATE TABLE D_ATM_GM_Models (
 ModelID int identity(1,1) NOT NULL,
 SolutionID int NOT NULL,
 Product varchar(10) NOT NULL,  ----------CHECK DATATYPE!!!
@@ -74,7 +74,7 @@ IsIndicators BIT DEFAULT 0
 ALTER Table ATM_GM_Models
 ADD  CONSTRAINT FK_ATM_GM_Models FOREIGN KEY (SolutionID,ModelGroupID) REFERENCES ATM_GM_ModelGroups(SolutionID,ModelGroupID)
 
-CREATE TABLE ATM_GM_ModelingFeatures (
+CREATE TABLE F_ATM_GM_ModelingFeatures (
 ModelID int NOT NULL, --FOREIGN KEY REFERENCES ATM_GM_Models(ModelID),
 SolutionID int NOT NULL,
 FeatureID int NOT NULL,-- FOREIGN KEY REFERENCES ATM_GM_Features(FeatureID),
@@ -89,14 +89,14 @@ ADD CONSTRAINT FK_ATM_GM_ModelingFeatures_1 FOREIGN KEY (ModelID,SolutionID) REF
 ALTER TABLE ATM_GM_ModelingFeatures
 ADD CONSTRAINT FK_ATM_GM_ModelingFeatures_2 FOREIGN KEY (FeatureID,SolutionID) REFERENCES ATM_GM_Features (FeatureID,SolutionID)
 
-CREATE TABLE ATM_GM_ModelingParameters ( -------To Check in Easy - domain level settings
+CREATE TABLE F_ATM_GM_ModelingParameters ( -------To Check in Easy - domain level settings
 SolutionID int NOT NULL, --Change foreign keys!!
 ModelGroupID int NOT NULL,
 ModelID int NOT NULL,-- FOREIGN KEY REFERENCES ATM_GM_Models(ModelID),
 FeatureID int NULL,-- FOREIGN KEY REFERENCES ATM_GM_Features(FeatureID),
 ParameterID int NOT NULL FOREIGN KEY REFERENCES ATM_GM_Parameters(ParameterID),
 Value float NOT NULL,
-CONSTRAINT pk_ATM_GM_ModelingParameters PRIMARY KEY (SolutionID,ModelGroupID,ModelID,ParameterID,Value) ---Cannot define PRIMARY KEY constraint on nullable column FeatureID
+CONSTRAINT pk_ATM_GM_ModelingParameters PRIMARY KEY (SolutionID,ModelGroupID,ModelID,ParameterID) ---Cannot define PRIMARY KEY constraint on nullable column FeatureID
 )
 
 ALTER Table ATM_GM_ModelingParameters
@@ -108,7 +108,7 @@ ADD CONSTRAINT FK_ATM_GM_ModelingParameters_1 FOREIGN KEY (ModelID,SolutionID) R
 ALTER TABLE ATM_GM_ModelingParameters
 ADD CONSTRAINT FK_ATM_GM_ModelingParameters_2 FOREIGN KEY (FeatureID,SolutionID) REFERENCES ATM_GM_Features (FeatureID,SolutionID)
 
-CREATE TABLE ATM_GM_Remodeling (
+CREATE TABLE R_ATM_GM_Remodeling (
 ModelID int NOT NULL,
 SolutionID int NOT NULL,-- FOREIGN KEY REFERENCES ATM_GM_Models(ModelID),
 RemodelingTimestamp datetime NOT NULL,
@@ -127,14 +127,14 @@ ADD CONSTRAINT FK_ATM_GM_Remodeling FOREIGN KEY (ModelID,SolutionID) REFERENCES 
 -----------------------------------------Data Extraction------------------------------------
 --------------------------------------------------------------------------------------------
 
-CREATE TABLE ATM_GM_DE_Connections (
+CREATE TABLE D_ATM_GM_DE_Connections (
 ConnectionID int NOT NULL PRIMARY KEY,
 ConnectionDesc varchar(500) NOT NULL,
 Provider varchar(50) NOT NULL,
 ConnectionString varchar(1000) NOT NULL -----ASK ERAN OR DAVID!!!!
 )
 
-CREATE TABLE ATM_GM_DE_DataSource (
+CREATE TABLE D_ATM_GM_DE_DataSource (
 DataSourceID int NOT NULL PRIMARY KEY,
 DataSourceDesc varchar(500) NOT NULL,
 ConnectionID int NOT NULL FOREIGN KEY REFERENCES ATM_GM_DE_Connections(ConnectionID),
@@ -145,13 +145,13 @@ QueryTemplate varchar(max) NULL
 -----------------------------------------Evaluation-----------------------------------------
 --------------------------------------------------------------------------------------------
 
-CREATE TABLE ATM_GM_EvaluationMeasures (
+CREATE TABLE D_ATM_GM_EvaluationMeasures (
 EvaluationMeasureID int IDENTITY(1,1) PRIMARY KEY, ---add identity coulmn
 EvaluationMeasureName varchar(250) NOT NULL,
 EvaluationDefinition varchar(max) NOT NULL
 )
 
-CREATE TABLE ATM_GM_ModelEvaluation (
+CREATE TABLE F_ATM_GM_ModelEvaluation (
 SolutionID int NOT NULL, --------FIX THE FOREIGN KEYS (to model groups)
 ModelGroupID int NOT NULL,
 ModelID int NOT NULL,
@@ -165,7 +165,7 @@ ADD  CONSTRAINT FK_ATM_GM_ModelEvaluation FOREIGN KEY (SolutionID,ModelGroupID) 
 ALTER Table ATM_GM_ModelEvaluation
 ADD  CONSTRAINT FK_ATM_GM_ModelEvaluation2 FOREIGN KEY (ModelID,SolutionID) REFERENCES ATM_GM_Models(ModelID,SolutionID)
 
-CREATE TABLE ATM_GM_ModelEvaluationResults (
+CREATE TABLE R_ATM_GM_ModelEvaluationResults (
 ModelID int NOT NULL,
 SolutionID int NOT NULL,
 RemodelingTimestamp datetime NOT NULL, --add timestamp as a foreign key to remodeling if possible
@@ -185,14 +185,14 @@ ADD  CONSTRAINT FK_ATM_GM_ModelEvaluationResults FOREIGN KEY (ModelID,SolutionID
 -----------------------------------------Indicators-----------------------------------------
 --------------------------------------------------------------------------------------------
 
-CREATE TABLE ATM_GM_Indicators (
+CREATE TABLE D_ATM_GM_Indicators (
 IndicatorID int NOT NULL PRIMARY KEY,
 IndicatorName varchar(50) NOT NULL,
 IndicatorDefinition varchar(1000) NOT NULL,
 IndicatorCaption varchar(100) NOT NULL
 )
 
-CREATE TABLE ATM_GM_ModelIndicators (
+CREATE TABLE F_ATM_GM_ModelIndicators (
 SolutionID int NOT NULL, --Goes together
 ModelGroupID int NOT NULL,
 ModelID int NOT NULL,
@@ -204,7 +204,7 @@ CONSTRAINT PK_ATM_GM_ModelIndicators PRIMARY KEY(SolutionID,ModelGroupID,ModelID
 ALTER Table ATM_GM_ModelIndicators
 ADD CONSTRAINT FK_ATM_GM_ModelIndicators FOREIGN KEY (SolutionID,ModelGroupID) REFERENCES ATM_GM_ModelGroups(SolutionID,ModelGroupID)
 
-CREATE TABLE ATM_GM_IndicatorLevels (
+CREATE TABLE D_ATM_GM_IndicatorLevels (
 SolutionID int NOT NULL,
 ModelGroupID int NOT NULL,
 IndicatorLevelID int NOT NULL,
@@ -216,7 +216,7 @@ CONSTRAINT PK_ATM_GM_IndicatorLevels PRIMARY KEY(SolutionID,ModelGroupID,Indicat
 ALTER Table ATM_GM_IndicatorLevels
 ADD CONSTRAINT FK_ATM_GM_IndicatorLevels FOREIGN KEY (SolutionID,ModelGroupID) REFERENCES ATM_GM_ModelGroups(SolutionID,ModelGroupID)
 
-CREATE TABLE ATM_GM_IndicatorLevelInstances (
+CREATE TABLE R_ATM_GM_IndicatorLevelInstances (
 SolutionID int NOT NULL,
 ModelGroupID int NOT NULL,
 IndicatorLevelID int NOT NULL,-- FOREIGN KEY REFERENCES ATM_GM_IndicatorLevels(IndicatorLevelID) ,
@@ -228,7 +228,7 @@ CONSTRAINT PK_ATM_GM_IndicatorLevelInstances PRIMARY KEY(SolutionID,ModelGroupID
 ALTER Table ATM_GM_IndicatorLevelInstances
 ADD CONSTRAINT FK_ATM_GM_IndicatorLevelInstances FOREIGN KEY (SolutionID,ModelGroupID) REFERENCES ATM_GM_ModelGroups(SolutionID,ModelGroupID)
 
-CREATE TABLE ATM_GM_ModelIndicatorValues (
+CREATE TABLE R_ATM_GM_ModelIndicatorValues (
 SolutionID int NOT NULL,
 ModelGroupID int NOT NULL,
 ModelID int NOT NULL,
