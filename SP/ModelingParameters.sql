@@ -1,33 +1,15 @@
---CREATE TABLE #ATM_GM_ModelingParameters (
---SolutionID int,
---ModelGroupID int,
---ModelID int,
---ParameterID int,
---Value varchar(250)
---)
+ALTER PROCEDURE USP_ModelingParameters 
 
---CREATE TABLE #FinalParametersDefinitions (
---SolutionID int,
---ModelGroupID int,
---ModelID int,
---ParameterID int,
---Value varchar(250)
---)
+AS
 
---INSERT INTO #FinalParametersDefinitions
---SELECT
---	SolutionID,
---	ModelGroupID,
---	ModelID,
---	ParameterID,
---	Value
---FROM #ATM_GM_ModelingParameters M JOIN ATM_GM_ModelingParameters MP
---	ON MP.ModelGroupID=F.ModelGroupID
---	AND MP.ModelGroupID=F.ModelGroupID
---	WHERE MP.SolutionID=-1
+IF OBJECT_ID('tempdb..#GM_ModelingParametes') IS NOT NULL
+	DROP TABLE #GM_ModelingParametes
 
+-------------------------------------------------------------------------
+-- Table that olds the parameters for each solution, model group id, and model id
+-------------------------------------------------------------------------
 
-CREATE TABLE #GM_ModelingParametesFinal (
+CREATE TABLE #GM_ModelingParametes (
 	SolutionID int,
 	ModelGroupID int,
 	ModelID int,
@@ -36,7 +18,12 @@ CREATE TABLE #GM_ModelingParametesFinal (
 	Value varchar(500)
 	)
 
-INSERT INTO #GM_ModelingParametesFinal (SolutionID,ModelGroupID,ModelID,FeatureID,ParameterID,Value)
+
+-------------------------------------------------------------------------------------
+-- Sets initial parametrs values for each SolutionID, ModelGroupID, and ModelID
+-------------------------------------------------------------------------------------
+
+INSERT INTO #GM_ModelingParametes (SolutionID,ModelGroupID,ModelID,FeatureID,ParameterID,Value)
 SELECT
 	A.SolutionID,
 	A.ModelGroupID,
@@ -48,28 +35,39 @@ SELECT
 			SolutionID,
 			ModelGroupID,
 			ModelID
-			FROM ATM_GM_Models ) A, [dbo].[ATM_GM_Parameters] P
+			FROM GM_D_Models ) A, [dbo].[GM_D_Parameters] P
 
+-------------------------------------------------------------------------------------
+-- changes all parameters values in the SolutionID level
+-------------------------------------------------------------------------------------
 
 UPDATE M
 SET M.Value = MP.Value,M.FeatureID=MP.FeatureID FROM 
-#GM_ModelingParametesFinal M JOIN ATM_GM_ModelingParameters MP
+#GM_ModelingParametes M JOIN GM_F_ModelingParameters MP
 ON M.SolutionID=MP.SolutionID AND M.ParameterID=MP.ParameterID
 WHERE MP.ModelGroupID =-1
 AND MP.ModelID = -1
 
+-------------------------------------------------------------------------------------
+-- changes all parameters values in the ModelGroupID level
+-------------------------------------------------------------------------------------
+
 UPDATE M
 SET M.Value = MP.Value,M.FeatureID=MP.FeatureID FROM 
-#GM_ModelingParametesFinal M JOIN ATM_GM_ModelingParameters MP
+#GM_ModelingParametes M JOIN GM_F_ModelingParameters MP
 ON M.SolutionID=MP.SolutionID
 AND M.ModelGroupID=MP.ModelGroupID
 AND M.ParameterID=MP.ParameterID
 WHERE MP.ModelID = -1
 AND MP.ModelGroupID <>-1
 
+-------------------------------------------------------------------------------------
+-- changes all parameters values in the ModelID level
+-------------------------------------------------------------------------------------
+
 UPDATE M
 SET M.Value = MP.Value,M.FeatureID=MP.FeatureID FROM 
-#GM_ModelingParametesFinal M JOIN ATM_GM_ModelingParameters MP
+#GM_ModelingParametes M JOIN GM_F_ModelingParameters MP
 ON M.SolutionID=MP.SolutionID
 AND M.ModelGroupID=MP.ModelGroupID
 AND M.ModelID=MP.ModelID
@@ -77,9 +75,6 @@ AND M.ParameterID=MP.ParameterID
 WHERE MP.ModelID <> -1
 AND MP.ModelGroupID <>-1
 
-
-
-
-SELECT * FROM #GM_ModelingParametesFinal
+SELECT * FROM #GM_ModelingParametes
 WHERE SolutionID <> -1 AND ModelGroupID <> -1 AND ModelID <> -1
 
