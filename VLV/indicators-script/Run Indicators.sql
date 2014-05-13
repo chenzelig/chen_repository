@@ -91,7 +91,8 @@ WHILE EXISTS (SELECT * FROM @Tests) BEGIN
 		SELECT [UnitID], ['+[ActualValueColumn]+'], ['+[PredictedValueColumn]+']
 		FROM #Temp1
 		WHERE	[Program_Or_BI_Recipe_Name] LIKE '''+[TP_Regex]+'''
-				AND ['+[ActualValueColumn]+'] > 0 '
+				AND ['+[ActualValueColumn]+'] > 0 
+				AND ['+[PredictedValueColumn]+'] IS NOT NULL'
 	FROM @Tests
 	WHERE [ID] = @TestID);
 
