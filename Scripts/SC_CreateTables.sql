@@ -9,8 +9,6 @@ DROP TABLE GM_D_Indicators
 DROP TABLE GM_R_ModelEvaluationResults
 DROP TABLE GM_F_ModelEvaluation
 DROP TABLE GM_D_EvaluationMeasures
-DROP TABLE GM_D_DE_DataSource
-DROP TABLE GM_D_DE_Connections
 DROP TABLE GM_R_Remodeling
 DROP TABLE GM_F_ModelingParameters
 DROP TABLE GM_F_ModelingFeatures
@@ -19,6 +17,33 @@ DROP TABLE GM_D_ModelGroups
 DROP TABLE GM_D_Features
 DROP TABLE GM_D_Parameters
 DROP TABLE GM_D_Solutions
+DROP TABLE GM_D_DE_DataSource
+DROP TABLE GM_D_DE_Connections
+
+
+--------------------------------------------------------------------------------------------
+-----------------------------------------Data Extraction------------------------------------
+--------------------------------------------------------------------------------------------
+
+CREATE TABLE GM_D_DE_Connections (
+ConnectionID int NOT NULL PRIMARY KEY,
+ConnectionDesc varchar(500) NOT NULL,
+Provider varchar(50) NOT NULL,
+ConnectionString varchar(1000) NOT NULL, -----ASK ERAN OR DAVID!!!!
+ConnUser varbinary(50) NOT NULL,
+CannPass varbinary(50) NOT NULL,
+ServerName varbinary(100) NOT NULL,
+ServiceName varchar(200) NULL,
+PortNo int NULL
+)
+
+CREATE TABLE GM_D_DE_DataSource (
+DataSourceID int NOT NULL PRIMARY KEY,
+DataSourceDesc varchar(500) NOT NULL,
+ConnectionID int NOT NULL FOREIGN KEY REFERENCES GM_D_DE_Connections(ConnectionID),
+QueryTemplate varchar(max) NULL
+)
+
 
 --------------------------------------------------------------------------------------------
 -----------------------------------------Modeling Tables------------------------------------
@@ -95,7 +120,7 @@ ModelGroupID int NOT NULL,
 ModelID int NOT NULL,-- FOREIGN KEY REFERENCES GM_D_Models(ModelID),
 FeatureID int NULL,-- FOREIGN KEY REFERENCES GM_D_Features(FeatureID),
 ParameterID int NOT NULL FOREIGN KEY REFERENCES GM_D_Parameters(ParameterID),
-Value float NOT NULL,
+Value varchar(max) NOT NULL,
 CONSTRAINT pk_GM_F_ModelingParameters PRIMARY KEY (SolutionID,ModelGroupID,ModelID,ParameterID,Value) ---Cannot define PRIMARY KEY constraint on nullable column FeatureID
 )
 
@@ -122,24 +147,6 @@ CONSTRAINT pk_GM_R_Remodeling PRIMARY KEY (ModelID,SolutionID,RemodelingTimestam
 ALTER TABLE GM_R_Remodeling
 ADD CONSTRAINT FK_GM_R_Remodeling FOREIGN KEY (ModelID,SolutionID) REFERENCES GM_D_Models
 
-
---------------------------------------------------------------------------------------------
------------------------------------------Data Extraction------------------------------------
---------------------------------------------------------------------------------------------
-
-CREATE TABLE GM_D_DE_Connections (
-ConnectionID int NOT NULL PRIMARY KEY,
-ConnectionDesc varchar(500) NOT NULL,
-Provider varchar(50) NOT NULL,
-ConnectionString varchar(1000) NOT NULL -----ASK ERAN OR DAVID!!!!
-)
-
-CREATE TABLE GM_D_DE_DataSource (
-DataSourceID int NOT NULL PRIMARY KEY,
-DataSourceDesc varchar(500) NOT NULL,
-ConnectionID int NOT NULL FOREIGN KEY REFERENCES GM_D_DE_Connections(ConnectionID),
-QueryTemplate varchar(max) NULL
-)
 
 --------------------------------------------------------------------------------------------
 -----------------------------------------Evaluation-----------------------------------------
