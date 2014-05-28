@@ -15,7 +15,7 @@ CREATE TABLE #GM_ModelingParametes (
 	ModelID int,
 	FeatureID int,
 	ParameterID int,
-	Value varchar(500)
+	Value varchar(max)
 	)
 
 

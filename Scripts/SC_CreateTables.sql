@@ -121,7 +121,7 @@ ModelID int NOT NULL,-- FOREIGN KEY REFERENCES GM_D_Models(ModelID),
 FeatureID int NULL,-- FOREIGN KEY REFERENCES GM_D_Features(FeatureID),
 ParameterID int NOT NULL FOREIGN KEY REFERENCES GM_D_Parameters(ParameterID),
 Value varchar(max) NOT NULL,
-CONSTRAINT pk_GM_F_ModelingParameters PRIMARY KEY (SolutionID,ModelGroupID,ModelID,ParameterID,Value) ---Cannot define PRIMARY KEY constraint on nullable column FeatureID
+CONSTRAINT pk_GM_F_ModelingParameters PRIMARY KEY (SolutionID,ModelGroupID,ModelID,ParameterID) ---Cannot define PRIMARY KEY constraint on nullable column FeatureID
 )
 
 ALTER Table GM_F_ModelingParameters
