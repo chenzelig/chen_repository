@@ -61,22 +61,20 @@ CREATE TABLE #AddColumns (name varchar(256),DataType varchar(256),max_length int
 WHILE EXISTS(SELECT 1 FROM #ImportQueries)
 BEGIN
 
-	SET @QueryNum= ( SELECT min(QueryNum)
+	SET @QueryNum= (SELECT min(QueryNum)
 						FROM #ImportQueries)
-
 	
-	SET @ImportQuery = ( SELECT Query
+	SET @ImportQuery = (SELECT Query
 					FROM #ImportQueries WHERE  QueryNum = @QueryNum)
 
 	SET @ImportQuery = REPLACE(@ImportQuery,'''','''''')
 
-	print(@queryNum)
+	SELECT @queryNum
 
 	Print (@ImportQuery)
 
-	IF @QueryNum = '1'
+	IF @QueryNum like '%1%' ---TO DO!!!! find a better soulution for this
 	BEGIN
-	select 1
 		
 		SET @CMD = '  
 					SELECT * INTO #T FROM
@@ -97,7 +95,7 @@ BEGIN
 	PRINT(@CMD)
 --	EXEC(@CMD)
 
-	IF @QueryNum = '1'
+	IF @QueryNum like '%1%'
 	BEGIN
 		
 		SET @SQL = 'SELECT c.name,y.name DataType,c.max_length,c.precision
@@ -127,8 +125,8 @@ BEGIN
 		PRINT(@SQL)
 	--	EXEC(@SQL)
 
-		ALTER TABLE #ATM_GM_RawData
-		DROP COLUMN Dummy
+	--	ALTER TABLE #ATM_GM_RawData
+	--	DROP COLUMN Dummy
 
 	--	INSERT INTO #ATM_GM_RawData
 	--	SELECT * FROM #T
