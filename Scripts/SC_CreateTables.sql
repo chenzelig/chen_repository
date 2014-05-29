@@ -31,17 +31,17 @@ ConnectionDesc varchar(500) NOT NULL,
 Provider varchar(50) NOT NULL,
 ConnectionString varchar(1000) NOT NULL, -----ASK ERAN OR DAVID!!!!
 ConnUser varbinary(50) NOT NULL,
-CannPass varbinary(50) NOT NULL,
+ConnPass varbinary(50) NOT NULL,
 ServerName varbinary(100) NOT NULL,
 ServiceName varchar(200) NULL,
-PortNo int NULL
+PortNo int NULL,
+SourceType varchar(20)
 )
 
 CREATE TABLE GM_D_DE_DataSource (
 DataSourceID int NOT NULL PRIMARY KEY,
 DataSourceDesc varchar(500) NOT NULL,
 ConnectionID int NOT NULL FOREIGN KEY REFERENCES GM_D_DE_Connections(ConnectionID),
-QueryTemplate varchar(max) NULL
 )
 
 
