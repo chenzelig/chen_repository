@@ -1,12 +1,14 @@
 ALTER PROCEDURE USP_GM_MainProcedure
 
+@SolutionID int=NULL,@ModelGroupID int = NULL, @ModelID int =NULL
+
 AS
 
 ----------------------------------------------------
 ---------------DECLARE VARIABLES--------------------
 ----------------------------------------------------
 
-DECLARE @ModelGroupID int, @ModelID int, @SolutionID int
+DECLARE @MGID int, @MID int, @SID int
 
 ---------------------------------------------------------------------------------------
 --Creating a table that holds the configuration for each solution,model group and model
@@ -41,15 +43,16 @@ INSERT INTO #ATM_GM_Solutions
 SELECT DISTINCT SolutionId
 FROM [dbo].[GM_D_Solutions]
 WHERE SolutionID <>-1
+AND SolutionID = ISNULL(@SolutionID,SolutionID)
 
 WHILE EXISTS(SELECT 1 FROM #ATM_GM_Solutions)
 BEGIN
 
-	SET @SolutionID= ( SELECT min(SolutionID)
+	SET @SID= ( SELECT min(SolutionID)
 						FROM #ATM_GM_Solutions)
 
 	---------------------------------------------------------------------------------------
-	--Creating a table that holds all the model group id's in the framework
+	--Creating a table that holds all the model group id's in the framework for current solution
 	---------------------------------------------------------------------------------------
 
 
@@ -61,8 +64,9 @@ BEGIN
 	INSERT INTO #ATM_GM_ModelGroups
 	SELECT DISTINCT ModelGroupID
 	FROM [dbo].[GM_D_ModelGroups]
-	WHERE SolutionID =  @SolutionID
+	WHERE SolutionID =  @SID
 	AND ModelGroupID <> -1
+	AND ModelGroupID = ISNULL(@ModelGroupID,ModelGroupID)
 
 	---------------------------------------------------------------------------------------
 	--Executing the data extraction for each model group in the framework for current solution
@@ -72,7 +76,7 @@ BEGIN
 	WHILE EXISTS(SELECT 1 FROM #ATM_GM_ModelGroups)
 	BEGIN
 
-		SET @ModelGroupId= ( SELECT min(ModelGroupID)
+		SET @MGID= ( SELECT min(ModelGroupID)
 							 FROM #ATM_GM_ModelGroups)
 
 	------------------------------------------------------------------
@@ -86,10 +90,10 @@ BEGIN
 
 		--------------TO DO!!!!!!!!!!!!!!! Add the execution of replacing parameters. will be configurated in the parameters table.
 
-		EXEC USP_DataExtraction @ModelGroupID= @ModelGroupId, @SolutionID = @SolutionID
+		EXEC USP_DataExtraction @ModelGroupID= @MGID, @SolutionID = @SID
 
 		---------------------------------------------------------------------------------------
-		--Creating a table that holds all the model id's in the framework
+		--Creating a table that holds all the model id's in the framework for current solution and model group
 		---------------------------------------------------------------------------------------
 
 		IF OBJECT_ID('tempdb..#ATM_GM_Models') IS NOT NULL
@@ -100,8 +104,9 @@ BEGIN
 		INSERT INTO #ATM_GM_Models
 		SELECT DISTINCT ModelID
 		FROM [dbo].[GM_D_Models]
-		WHERE ModelGroupId = @ModelGroupId
-		AND SolutionID = @SolutionID
+		WHERE ModelGroupId = @MGID
+		AND SolutionID = @SID
+		AND ModelID=ISNULL(@ModelID,ModelID)
 		AND ModelID <> -1
 
 		WHILE EXISTS(SELECT 1 FROM #ATM_GM_Models)
@@ -116,22 +121,22 @@ BEGIN
 
 			CREATE TABLE #ATM_GM_PreparedData (Dummy int)
 
-				SET @ModelId= ( SELECT min(ModelID)
+				SET @MID= ( SELECT min(ModelID)
 								FROM #ATM_GM_Models)
 			--to DO!!!!!!!!!!!!!!!!!!!!!!!!!!!! Exec a procedure of this specific model
 
 			DELETE FROM #ATM_GM_Models
-			WHERE ModelID = @ModelID
+			WHERE ModelID = @MID
 		
 		END -- End of model loop
 
 
 		DELETE FROM #ATM_GM_ModelGroups
-		WHERE ModelGroupID = @ModelGroupId
+		WHERE ModelGroupID = @MGID
 
 	END --end of model group loop
 
 	DELETE FROM #ATM_GM_Solutions
-	WHERE SolutionID = @SolutionID
+	WHERE SolutionID = @SID
 
 END
