@@ -8,7 +8,7 @@ AS
 ---------------DECLARE VARIABLES--------------------
 ----------------------------------------------------
 
-DECLARE @MGID int, @MID int, @SID int
+DECLARE @MGID int, @MID int, @SID int, @CMD varchar(max)
 
 ---------------------------------------------------------------------------------------
 --Creating a table that holds the configuration for each solution,model group and model
@@ -121,8 +121,19 @@ BEGIN
 
 			CREATE TABLE #ATM_GM_PreparedData (Dummy int)
 
-				SET @MID= ( SELECT min(ModelID)
-								FROM #ATM_GM_Models)
+			SET @MID= (SELECT min(ModelID)
+							FROM #ATM_GM_Models)
+
+			SELECT @CMD = Value
+			FROM #ATM_GM_ModelingParameters
+			WHERE SolutionID = @DIS
+			and ModelGroupID = @MGID
+			and ModelID = @MID
+			and ParameterId=3
+
+			PRINT(@CMD)
+			EXEC(@CMD)
+
 			--to DO!!!!!!!!!!!!!!!!!!!!!!!!!!!! Exec a procedure of this specific model
 
 			DELETE FROM #ATM_GM_Models
