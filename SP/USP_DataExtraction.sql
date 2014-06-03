@@ -1,6 +1,5 @@
 ALTER PROCEDURE USP_DataExtraction
 
-@SolutionID int,
 @ModelGroupID int
 
 AS
@@ -26,8 +25,7 @@ CREATE TABLE #ImportQueries
  SELECT @xmlQuery = value
  FROM
  #ATM_GM_ModelingParameters
- WHERE SolutionID=@SolutionID
- AND ModelGroupID = @ModelGroupID
+ WHERE ModelGroupID = @ModelGroupID
  AND ParameterID=1 --ParameterID 1 is the query template
 
 INSERT INTO #ImportQueries (QueryNum,Query)
@@ -44,8 +42,7 @@ SELECT @SourceType = C.SourceType, @ServerName = C.ServerName,
 --	,@ParametersDomainID = ParametersDomainID, @ProcessID = I.ProcessID,
 FROM [dbo].[GM_D_DE_Connections] C
 WHERE ConnectionId = (SELECT Convert(int,max(Value)) from  #ATM_GM_ModelingParameters
-						WHERE SolutionID = @SolutionID
-						AND ModelGroupID = @ModelGroupID
+						WHERE ModelGroupID = @ModelGroupID
 						AND ParameterID = 2 )--ParameterID 2 is the connectionID )
 
 -------------------------------------------------------------------------
@@ -69,8 +66,6 @@ BEGIN
 
 	SET @ImportQuery = REPLACE(@ImportQuery,'''','''''')
 
-	SELECT @queryNum
-
 	Print (@ImportQuery)
 
 	IF @QueryNum like '%1%' ---TO DO!!!! find a better soulution for this
@@ -93,8 +88,8 @@ BEGIN
 							      AND t.object_id=OBJECT_ID(''tempdb..#T'')
 
 							DECLARE @SQL varchar(max)=NULL
-							SELECT @SQL=ISNULL(@SQL+'','','''')+ ''[''+name+''] ''+DataType+ case DataType when ''varchar'' then ''(''+case when max_length=-1 then ''max'' else convert(varchar(max),CASE WHEN max_Length<4000 then 2*max_length else ''max'' end) end+'')''
-																																					when ''numeric'' then ''(''+convert(varchar(max),max_length)+'',''+convert(varchar(max),precision)+'')''
+							SELECT @SQL=ISNULL(@SQL+'','','''')+ ''[''+name+''] ''+ CASE WHEN DataType=''text'' then ''varchar'' else DataType END + case when DataType in (''varchar'',''text'') then ''(''+case when max_length=-1 then ''max'' else convert(varchar(max),CASE WHEN max_Length<4000 then 2*max_length else ''max'' end) end+'')''
+																																					when  DataType= ''numeric'' then ''(''+convert(varchar(max),max_length)+'',''+convert(varchar(max),precision)+'')''
 																																					else '''' end
 							FROM #AddColumns
 
