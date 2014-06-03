@@ -11,7 +11,7 @@ AS
 -------------------------------------------------------------------------
 DECLARE
 
-@xmlQuery xml, @SourceType VARCHAR(20), @ConnUser varchar(50),@ConnPass varchar(50),@ServerName varchar(100),@SerivceName varchar(200),@PortNo int,@QueryNum varchar(20),@ImportQuery varchar(max),@CMD varchar(max),@SQL varchar(max)
+@xmlQuery xml, @SourceType VARCHAR(20), @ConnUser varchar(50),@ConnPass varchar(50),@ServerName varchar(100),@SerivceName varchar(200),@PortNo int,@QueryNum varchar(20),@ImportQuery varchar(max),@CMD varchar(max),@SQL varchar(max),@ConnectionString varchar(1000)
 
 -------------------------------------------------------------------------
 -- Taking all queries for this model group from the configurations and putting them in a temp table
@@ -40,7 +40,7 @@ from @xmlQuery.nodes('Queries/Row') T(DS)
 -------------------------------------------------------------------------
 
 SELECT @SourceType = C.SourceType, @ServerName = C.ServerName, 
-	@ConnUser = C.ConnUser, @ConnPass = C.ConnPass, @PortNo=C.PortNo --@ExecQuery = I.ExecQuery,
+	@ConnUser = C.ConnUser, @ConnPass = C.ConnPass, @PortNo=C.PortNo,@ConnectionString=ConnectionString --@ExecQuery = I.ExecQuery,
 --	,@ParametersDomainID = ParametersDomainID, @ProcessID = I.ProcessID,
 FROM [dbo].[GM_D_DE_Connections] C
 WHERE ConnectionId = (SELECT Convert(int,max(Value)) from  #ATM_GM_ModelingParameters
@@ -75,12 +75,42 @@ BEGIN
 
 	IF @QueryNum like '%1%' ---TO DO!!!! find a better soulution for this
 	BEGIN
-		
-		SET @CMD = '  
+
+			SET @CMD = '  
 					SELECT * INTO #T FROM
 					(SELECT  *
-					FROM OPENROWSET('''+@SourceType+''',''' + @ServerName +','+CAST(@PortNo AS VARCHAR(20))+''';''' + @ConnUser +''';'''+ @ConnPass + ''',''' + @ImportQuery + '''
-								) A ) B'
+					FROM OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + '''
+								) A ) B
+					
+					
+					INSERT INTO #AddColumns			
+					SELECT c.name,y.name DataType,c.max_length,c.precision
+					FROM tempdb.sys.tables t
+						INNER JOIN tempdb.sys.columns c
+						   ON t.object_id=c.object_id
+						INNER JOIN tempdb.sys.types y
+						   ON     c.user_type_id=y.user_type_id
+							      AND t.object_id=OBJECT_ID(''tempdb..#T'')
+
+							DECLARE @SQL varchar(max)=NULL
+							SELECT @SQL=ISNULL(@SQL+'','','''')+ ''[''+name+''] ''+DataType+ case DataType when ''varchar'' then ''(''+case when max_length=-1 then ''max'' else convert(varchar(max),CASE WHEN max_Length<4000 then 2*max_length else ''max'' end) end+'')''
+																																					when ''numeric'' then ''(''+convert(varchar(max),max_length)+'',''+convert(varchar(max),precision)+'')''
+																																					else '''' end
+							FROM #AddColumns
+
+							SET @SQL=''ALTER TABLE #ATM_GM_RawData
+							ADD ''+@SQL
+
+
+							PRINT(@SQL)
+							EXEC(@SQL)
+
+							ALTER TABLE #ATM_GM_RawData
+							DROP COLUMN Dummy
+
+							INSERT INTO #ATM_GM_RawData
+							SELECT * FROM #T
+					'
 	END
 
 	ELSE BEGIN
@@ -88,50 +118,12 @@ BEGIN
 		SET @CMD = '  
 					INSERT INTO #ATM_GM_RawData  
 					SELECT  *
-					FROM OPENROWSET('''+@SourceType+''',''' + @ServerName +','+CAST(@PortNo AS VARCHAR(20))+''';''' + @ConnUser +''';'''+ @ConnPass + ''',''' + @ImportQuery + '''
+					FROM OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + '''
 								) A' 
 	END
 
 	PRINT(@CMD)
---	EXEC(@CMD)
-
-	IF @QueryNum like '%1%'
-	BEGIN
-		
-		SET @SQL = 'SELECT c.name,y.name DataType,c.max_length,c.precision
-					FROM tempdb.sys.tables t
-						INNER JOIN tempdb.sys.columns c
-						   ON t.object_id=c.object_id
-						INNER JOIN tempdb.sys.types y
-						   ON     c.user_type_id=y.user_type_id
-							      AND t.object_id=OBJECT_ID(''tempdb..#T'')
-								'
-
-		PRINT(@SQL)
-
-	--	INSERT INTO #AddColumns
-	--	EXEC(@SQL)
-		
-		SET @SQL=NULL
-		SELECT @SQL=ISNULL(@SQL+',','')+ '['+name+'] '+DataType+ case DataType when 'varchar' then '('+case when max_length=-1 then 'max' else convert(varchar(max),max_length) end+')'
-																																when 'numeric' then '('+convert(varchar(max),max_length)+','+convert(varchar(max),precision)+')'
-																																else '' end
-		FROM #AddColumns
-
-		SET @SQL='ALTER TABLE #ATM_GM_RawData
-		ADD '+@SQL
-
-
-		PRINT(@SQL)
-	--	EXEC(@SQL)
-
-	--	ALTER TABLE #ATM_GM_RawData
-	--	DROP COLUMN Dummy
-
-	--	INSERT INTO #ATM_GM_RawData
-	--	SELECT * FROM #T
-
-	END -- End of Query = 1
+	EXEC(@CMD)
 
 DELETE FROM #ImportQueries WHERE QueryNum = @QueryNum
 		

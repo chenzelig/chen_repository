@@ -129,7 +129,7 @@ BEGIN
 			WHERE SolutionID = @DIS
 			and ModelGroupID = @MGID
 			and ModelID = @MID
-			and ParameterId=3
+			and ParameterId=3 -- Parameter 3 i Data preperation SP
 
 			PRINT(@CMD)
 			EXEC(@CMD)
