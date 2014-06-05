@@ -77,8 +77,8 @@ SolutionID int NOT NULL,
 ModelGroupID int NOT NULL,
 ModelGroupDescription varchar(500) NOT NULL,
 PreStep varchar(max) NULL  ----------CHECK DATATYPE!!!
-CONSTRAINT PK_GM_D_ModelGroups PRIMARY KEY (SolutionID,ModelGroupID)
-) ON UPS_SolutionID_PartitionScheme(SolutionID)
+CONSTRAINT PK_GM_D_ModelGroups PRIMARY KEY (ModelGroupID)
+)-- ON UPS_SolutionID_PartitionScheme(SolutionID)
 
 CREATE TABLE GM_D_Models (
 ModelID int identity(1,1) NOT NULL,
@@ -93,11 +93,11 @@ ModelGroupID int NOT NULL,
 IsBackground BIT DEFAULT 0, -----------TO CHECK!!!
 IsProduction BIT DEFAULT 0,
 IsIndicators BIT DEFAULT 0
- CONSTRAINT PK_GM_D_Models PRIMARY KEY (ModelID,SolutionID)
-) ON UPS_SolutionID_PartitionScheme(SolutionID)
+ CONSTRAINT PK_GM_D_Models PRIMARY KEY (ModelID)
+)-- ON UPS_SolutionID_PartitionScheme(SolutionID)
 
 ALTER Table GM_D_Models
-ADD  CONSTRAINT FK_GM_D_Models FOREIGN KEY (SolutionID,ModelGroupID) REFERENCES GM_D_ModelGroups(SolutionID,ModelGroupID)
+ADD  CONSTRAINT FK_GM_D_Models FOREIGN KEY (ModelGroupID) REFERENCES GM_D_ModelGroups(ModelGroupID)
 
 CREATE TABLE GM_F_ModelingFeatures (
 ModelID int NOT NULL, --FOREIGN KEY REFERENCES GM_D_Models(ModelID),
@@ -109,7 +109,7 @@ CONSTRAINT pk_GM_F_ModelingFeatures PRIMARY KEY (ModelID,FeatureID)
 )
 
 ALTER TABLE GM_F_ModelingFeatures
-ADD CONSTRAINT FK_GM_F_ModelingFeatures_1 FOREIGN KEY (ModelID,SolutionID) REFERENCES GM_D_Models (ModelID,SolutionID)
+ADD CONSTRAINT FK_GM_F_ModelingFeatures_1 FOREIGN KEY (ModelID) REFERENCES GM_D_Models (ModelID)
 
 ALTER TABLE GM_F_ModelingFeatures
 ADD CONSTRAINT FK_GM_F_ModelingFeatures_2 FOREIGN KEY (FeatureID,SolutionID) REFERENCES GM_D_Features (FeatureID,SolutionID)
@@ -125,13 +125,16 @@ CONSTRAINT pk_GM_F_ModelingParameters PRIMARY KEY (SolutionID,ModelGroupID,Model
 )
 
 ALTER Table GM_F_ModelingParameters
-ADD  CONSTRAINT FK_GM_F_ModelingParameters FOREIGN KEY (SolutionID,ModelGroupID) REFERENCES GM_D_ModelGroups(SolutionID,ModelGroupID)
+ADD  CONSTRAINT FK_GM_F_ModelingParameters FOREIGN KEY (ModelGroupID) REFERENCES GM_D_ModelGroups(ModelGroupID)
 
 ALTER TABLE GM_F_ModelingParameters
-ADD CONSTRAINT FK_GM_F_ModelingParameters_1 FOREIGN KEY (ModelID,SolutionID) REFERENCES GM_D_Models (ModelID,SolutionID)
+ADD CONSTRAINT FK_GM_F_ModelingParameters_1 FOREIGN KEY (ModelID) REFERENCES GM_D_Models (ModelID)
 
 ALTER TABLE GM_F_ModelingParameters
 ADD CONSTRAINT FK_GM_F_ModelingParameters_2 FOREIGN KEY (FeatureID,SolutionID) REFERENCES GM_D_Features (FeatureID,SolutionID)
+
+ALTER TABLE GM_F_ModelingParameters
+ADD CONSTRAINT FK_GM_F_ModelingParameters_3 FOREIGN KEY (SolutionID) REFERENCES GM_D_Solutions (SolutionID)
 
 CREATE TABLE GM_R_Remodeling (
 ModelID int NOT NULL,
@@ -145,7 +148,7 @@ CONSTRAINT pk_GM_R_Remodeling PRIMARY KEY (ModelID,SolutionID,RemodelingTimestam
 )
 
 ALTER TABLE GM_R_Remodeling
-ADD CONSTRAINT FK_GM_R_Remodeling FOREIGN KEY (ModelID,SolutionID) REFERENCES GM_D_Models
+ADD CONSTRAINT FK_GM_R_Remodeling FOREIGN KEY (ModelID) REFERENCES GM_D_Models
 
 
 --------------------------------------------------------------------------------------------
@@ -167,10 +170,10 @@ CONSTRAINT pk_GM_F_ModelEvaluation PRIMARY KEY (SolutionID,ModelGroupID,ModelID,
 )
 
 ALTER Table GM_F_ModelEvaluation
-ADD  CONSTRAINT FK_GM_F_ModelEvaluation FOREIGN KEY (SolutionID,ModelGroupID) REFERENCES GM_D_ModelGroups(SolutionID,ModelGroupID)
+ADD  CONSTRAINT FK_GM_F_ModelEvaluation FOREIGN KEY (ModelGroupID) REFERENCES GM_D_ModelGroups(ModelGroupID)
 
 ALTER Table GM_F_ModelEvaluation
-ADD  CONSTRAINT FK_GM_F_ModelEvaluation2 FOREIGN KEY (ModelID,SolutionID) REFERENCES GM_D_Models(ModelID,SolutionID)
+ADD  CONSTRAINT FK_GM_F_ModelEvaluation2 FOREIGN KEY (ModelID) REFERENCES GM_D_Models(ModelID)
 
 CREATE TABLE GM_R_ModelEvaluationResults (
 ModelID int NOT NULL,
@@ -183,7 +186,7 @@ CONSTRAINT pk_GM_R_ModelEvaluationResults PRIMARY KEY (ModelID,SolutionID,Remode
 )
 
 ALTER Table GM_R_ModelEvaluationResults
-ADD  CONSTRAINT FK_GM_R_ModelEvaluationResults FOREIGN KEY (ModelID,SolutionID) REFERENCES GM_D_Models(ModelID,SolutionID)
+ADD  CONSTRAINT FK_GM_R_ModelEvaluationResults FOREIGN KEY (ModelID) REFERENCES GM_D_Models(ModelID)
 
 --ALTER Table GM_R_ModelEvaluationResults
 --ADD  CONSTRAINT FK_GM_R_ModelEvaluationResults FOREIGN KEY (ModelID,RemodelingTimestamp) REFERENCES GM_R_Remodeling(ModelID,RemodelingTimestamp) ------Check if it works! Not worling, ask Itamar what to do 
@@ -209,7 +212,7 @@ CONSTRAINT PK_GM_F_ModelIndicators PRIMARY KEY(SolutionID,ModelGroupID,ModelID,I
 )
 
 ALTER Table GM_F_ModelIndicators
-ADD CONSTRAINT FK_GM_F_ModelIndicators FOREIGN KEY (SolutionID,ModelGroupID) REFERENCES GM_D_ModelGroups(SolutionID,ModelGroupID)
+ADD CONSTRAINT FK_GM_F_ModelIndicators FOREIGN KEY (ModelGroupID) REFERENCES GM_D_ModelGroups(ModelGroupID)
 
 CREATE TABLE GM_D_IndicatorLevels (
 SolutionID int NOT NULL,
@@ -221,7 +224,10 @@ CONSTRAINT PK_GM_D_IndicatorLevels PRIMARY KEY(SolutionID,ModelGroupID,Indicator
 )
 
 ALTER Table GM_D_IndicatorLevels
-ADD CONSTRAINT FK_GM_D_IndicatorLevels FOREIGN KEY (SolutionID,ModelGroupID) REFERENCES GM_D_ModelGroups(SolutionID,ModelGroupID)
+ADD CONSTRAINT FK_GM_D_IndicatorLevels FOREIGN KEY (ModelGroupID) REFERENCES GM_D_ModelGroups(ModelGroupID)
+
+--ALTER Table GM_D_IndicatorLevels_1
+--ADD CONSTRAINT FK_GM_D_IndicatorLevels FOREIGN KEY (SolutionID) REFERENCES GM_D_Solutions(SolutionID)
 
 CREATE TABLE GM_R_IndicatorLevelInstances (
 SolutionID int NOT NULL,
@@ -233,7 +239,7 @@ CONSTRAINT PK_GM_R_IndicatorLevelInstances PRIMARY KEY(SolutionID,ModelGroupID,I
 )
 
 ALTER Table GM_R_IndicatorLevelInstances
-ADD CONSTRAINT FK_GM_R_IndicatorLevelInstances FOREIGN KEY (SolutionID,ModelGroupID) REFERENCES GM_D_ModelGroups(SolutionID,ModelGroupID)
+ADD CONSTRAINT FK_GM_R_IndicatorLevelInstances FOREIGN KEY (ModelGroupID) REFERENCES GM_D_ModelGroups(ModelGroupID)
 
 CREATE TABLE GM_R_ModelIndicatorValues (
 SolutionID int NOT NULL,
@@ -248,7 +254,7 @@ CONSTRAINT PK_GM_R_ModelIndicatorValues PRIMARY KEY(SolutionID,ModelGroupID,Mode
 )
 
 ALTER Table GM_R_ModelIndicatorValues
-ADD CONSTRAINT FK_GM_R_ModelIndicatorValues FOREIGN KEY (SolutionID,ModelGroupID) REFERENCES GM_D_ModelGroups(SolutionID,ModelGroupID)
+ADD CONSTRAINT FK_GM_R_ModelIndicatorValues FOREIGN KEY (ModelGroupID) REFERENCES GM_D_ModelGroups(ModelGroupID)
 --ALTER TABLE GM_R_ModelIndicatorValues
 --ADD CONSTRAINT FK_GM_R_ModelIndicatorValues FOREIGN KEY (SolutionID,ModelGroupID,IndicatorLevelID,IndicatorLevelInstanceID) REFERENCES GM_R_IndicatorLevelInstances(SolutionID,ModelGroupID,IndicatorLevelID,IndicatorLevelInstanceID) -- cannot add this constraint... Do something instead?
 

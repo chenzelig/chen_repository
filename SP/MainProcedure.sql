@@ -122,9 +122,20 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 			PRINT(@CMD)
 			EXEC(@CMD)
 
-			SELECT * FROM  #ATM_GM_PreparedData -- For Testing
+			--SELECT * FROM  #ATM_GM_PreparedData -- For Testing
 
-			--to DO!!!!!!!!!!!!!!!!!!!!!!!!!!!! Exec a procedure of this specific model
+			------------------------------------------------------------------
+			--Executing the model using the prepared data table
+			------------------------------------------------------------------
+
+			SELECT @CMD = Value
+			FROM #ATM_GM_ModelingParameters
+			WHERE ModelID = @MID
+			and ParameterId=5 -- Parameter 5 i the Model Execution
+
+			print(@CMD)
+			EXEC(@CMD)
+
 
 			DELETE FROM #ATM_GM_Models
 			WHERE ModelID = @MID
