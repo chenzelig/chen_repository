@@ -10,6 +10,8 @@ INSERT into [dbo].[GM_D_Parameters] Values(4,'Prepared Data Schemna','')
 
 INSERT into [dbo].[GM_D_Parameters] Values(5,'Modeling Stored Procedure','')
 
+INSERT INTO [dbo].[GM_D_Parameters] Values(6,'Connection Type','')
+
 
 INSERT INTO [dbo].[GM_D_Solutions] Values (-1,'Generic Solution')
 

@@ -53,7 +53,8 @@ DECLARE
 @EndTime datetime,
 @ErrorMessage varchar(1000),
 @ModelGroupName varchar(100),
-@LogMessage varchar(1000)
+@LogMessage varchar(1000),
+@ConnectionType int
 
 -------------------------------------------------------------------------
 -- Taking all queries for this model group from the configurations and putting them in a temp table
@@ -117,6 +118,18 @@ Set @FailPoint=3
 	SET @ImportQuery = REPLACE(@ImportQuery,'''','''''')
 
 	Print (@ImportQuery)
+
+	SET @ConnectionType= (SELECT Convert(int,max(Value)) from  #ATM_GM_ModelingParameters
+						WHERE ModelGroupID = @ModelGroupID
+						AND ParameterID = 6) -- Parameter 6 is the connection type 
+
+	IF @ConnectionType=1
+	BEGIN
+
+	SET @CMD = 'EXEC [dbo].[USP_VM2F_ImportDataFromMIDAS] @sqlCommand='+@ImportQuery+''',@password=''''b3563823-f1ae-40c6-b236-deaa478c873a'''' , @receiveTimeout=5000000, 
+	@module=''''iBI'''
+
+	END
 
 	IF @QueryNum like '%1%' ---TO DO!!!! find a better soulution for this
 	BEGIN
