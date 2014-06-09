@@ -1,20 +1,68 @@
-ALTER PROCEDURE USP_DataExtraction
+USE MFG_Solutions
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_DataExtraction]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[USP_DataExtraction]
+
+GO
+
+/*******************************************************           
+* Procedure:		[USP_DataExtraction]  
+*                                                              
+* Description:		Creating a table of configuration for each solution, model group and model that are in the data base
+* 
+* ----------------------------------------------------------     
+*                                                                    
+* Modification Log:                                            
+* Date			Modified By			Modification:                         
+* ----			-----------			--------------------         
+* 2014-6-09		Gil Ben Shalom		Creating the SP 
+*******************************************************/ 
+
+CREATE PROCEDURE USP_DataExtraction
 
 @ModelGroupID int
 
 AS
 
-
+BEGIN TRY
 -------------------------------------------------------------------------
 -- Declare Variables
 -------------------------------------------------------------------------
 DECLARE
 
-@xmlQuery xml, @SourceType VARCHAR(20), @ConnUser varchar(50),@ConnPass varchar(50),@ServerName varchar(100),@SerivceName varchar(200),@PortNo int,@QueryNum varchar(20),@ImportQuery varchar(max),@CMD varchar(max),@SQL varchar(max),@ConnectionString varchar(1000)
+@xmlQuery xml,
+@SourceType VARCHAR(20),
+@ConnUser varchar(50),
+@ConnPass varchar(50),
+@ServerName varchar(100),
+@SerivceName varchar(200),
+@PortNo int,
+@QueryNum varchar(20),
+@ImportQuery varchar(max),
+@CMD varchar(max),
+@SQL varchar(max),
+@ConnectionString varchar(1000),
+@FailPoint int,
+@StartTime datetime=GETUTCDATE(),
+@EndTime datetime,
+@ErrorMessage varchar(1000),
+@ModelGroupName varchar(100),
+@LogMessage varchar(1000)
 
 -------------------------------------------------------------------------
 -- Taking all queries for this model group from the configurations and putting them in a temp table
 -------------------------------------------------------------------------
+Set @FailPoint=1
+
+SET @ModelGroupName = (SELECT TOP 1 ModelGroupDescription FROM 
+							[dbo].[GM_D_ModelGroups]
+							WHERE ModelGroupID = @ModelGroupID)
 
 CREATE TABLE #ImportQueries
 (
@@ -36,14 +84,14 @@ from @xmlQuery.nodes('Queries/Row') T(DS)
 -------------------------------------------------------------------------
 -- Taking all openrowset details from the configuration table
 -------------------------------------------------------------------------
+Set @FailPoint=2
 
 SELECT @SourceType = C.SourceType, @ServerName = C.ServerName, 
-	@ConnUser = C.ConnUser, @ConnPass = C.ConnPass, @PortNo=C.PortNo,@ConnectionString=ConnectionString --@ExecQuery = I.ExecQuery,
---	,@ParametersDomainID = ParametersDomainID, @ProcessID = I.ProcessID,
+	@ConnUser = C.ConnUser, @ConnPass = C.ConnPass, @PortNo=C.PortNo,@ConnectionString=ConnectionString 
 FROM [dbo].[GM_D_DE_Connections] C
 WHERE ConnectionId = (SELECT Convert(int,max(Value)) from  #ATM_GM_ModelingParameters
 						WHERE ModelGroupID = @ModelGroupID
-						AND ParameterID = 2 )--ParameterID 2 is the connectionID )
+						AND ParameterID = 2 )--ParameterID 2 is the connectionID
 
 -------------------------------------------------------------------------
 -- Creating a table with columns names and data type for #ATM_GM_RawData table, using the query data
@@ -57,6 +105,8 @@ CREATE TABLE #AddColumns (name varchar(256),DataType varchar(256),max_length int
 
 WHILE EXISTS(SELECT 1 FROM #ImportQueries)
 BEGIN
+
+Set @FailPoint=3
 
 	SET @QueryNum= (SELECT min(QueryNum)
 						FROM #ImportQueries)
@@ -123,3 +173,20 @@ BEGIN
 DELETE FROM #ImportQueries WHERE QueryNum = @QueryNum
 		
 END ----END of QueryLoop
+
+SET @EndTime = GETUTCDATE()
+SET @LogMessage = 'Sucsses'
+EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_DataExtraction', @SectionName=@ModelGroupName,
+						@EngineName = 'MFG_Solutions', @ModuleName = 'DataExtraction', @LogEventMessage = @LogMessage, 
+						@StartDate = @StartTime, @EndDate = @EndTime, @LogEventType = 'I'	
+
+END TRY
+
+BEGIN CATCH
+
+SET @ErrorMessage = 'Fail Point: ' + CONVERT(VARCHAR(3), @FailPoint) + ERROR_MESSAGE()
+EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_DataExtraction', @EngineName = 'MFG_Solutions', 
+						@ModuleName = 'DataExtraction', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
+RAISERROR (N'USP_EASY_CalculateMonitors::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)
+
+END CATCH

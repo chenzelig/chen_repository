@@ -1,4 +1,30 @@
-ALTER PROCEDURE USP_ModelingParameters 
+USE MFG_Solutions
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_ModelingParameters]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[USP_ModelingParameters]
+
+GO
+
+/*******************************************************           
+* Procedure:		[USP_ModelingParameters]  
+*                                                              
+* Description:		Creating a table of configuration for each solution, model group and model that are in the data base
+* 
+* ----------------------------------------------------------     
+*                                                                    
+* Modification Log:                                            
+* Date			Modified By			Modification:                         
+* ----			-----------			--------------------         
+* 2014-6-09		Gil Ben Shalom		Creating the SP 
+*******************************************************/ 
+
+CREATE PROCEDURE USP_ModelingParameters 
 
 AS
 

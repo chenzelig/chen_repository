@@ -1,14 +1,47 @@
-ALTER PROCEDURE USP_GM_MainProcedure
+USE MFG_Solutions
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_GM_MainProcedure]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[USP_GM_MainProcedure]
+
+GO
+
+/*******************************************************           
+* Procedure:		[USP_GM_MainProcedure]  
+*                                                              
+* Description:		Main procedure of the generic framework. Runs data extractions, modeling, evaluation etc.   
+* 
+* ----------------------------------------------------------     
+*                                                                    
+* Modification Log:                                            
+* Date			Modified By			Modification:                         
+* ----			-----------			--------------------         
+* 2014-6-09		Gil Ben Shalom		Creating the SP 
+*******************************************************/ 
+
+CREATE PROCEDURE USP_GM_MainProcedure
 
 @SolutionID int=NULL,@ModelGroupID int = NULL, @ModelID int =NULL
 
 AS
 
+BEGIN TRY
+
 ----------------------------------------------------
 ---------------DECLARE VARIABLES--------------------
 ----------------------------------------------------
 
-DECLARE @MGID int, @MID int, @SID int, @CMD varchar(max)
+DECLARE @MGID int, @MID int, @SID int, @CMD varchar(max),
+@FailPoint int,@StartTime datetime = GETDATE(),@EndTime datetime,@ErrorMessage varchar(1000),@LogMessage varchar(1000),
+@ModelGroupLogMessage varchar (1000), @ModelGroupEndTime datetime,@ModelGroupStartTime datetime,@ModelGroupName varchar(100),@SolutionName varchar(100)
+
+DECLARE @ModelGroupInfoLog TABLE (Step VARCHAR(100),
+		StartTime DATETIME,EndTime DATETIME, Secs AS DATEDIFF(SS,StartTime,EndTime))
 
 ---------------------------------------------------------------------------------------
 --Creating a table that holds the configuration for each solution,model group and model
@@ -60,6 +93,16 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 		SET @MGID= ( SELECT min(ModelGroupID)
 							 FROM #ATM_GM_ModelGroups)
 
+		SET @ModelGroupName = (SELECT TOP 1 ModelGroupDescription FROM 
+								[dbo].[GM_D_ModelGroups]
+								WHERE ModelGroupID = @MGID)
+
+	    SET @SolutionName = (SELECT TOP 1 SolutionDescription FROM
+		[dbo].[GM_D_Solutions] S INNER JOIN [GM_D_ModelGroups] MG on S.SolutionID = MG.SolutionID
+		AND MG.ModelGroupID=@MGID)
+
+		SET @ModelGroupStartTime = GETUTCDATE()
+
 	------------------------------------------------------------------
 	--Generic Table for holding raw data for each model group
 	------------------------------------------------------------------
@@ -71,7 +114,16 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 
 		--------------TO DO!!!!!!!!!!!!!!! Add the execution of replacing parameters. will be configurated in the parameters table.
 
+		SET @FailPoint = 1 -- Failiure in the data extraction
+
+		INSERT INTO @ModelGroupInfoLog(Step,StartTime)
+		SELECT 'DataExtraction',GETUTCDATE()
+
 		EXEC USP_DataExtraction @ModelGroupID= @MGID
+
+		UPDATE @ModelGroupInfoLog
+		SET EndTime = GETUTCDATE()
+		where Step='DataExtraction'
 
 		---------------------------------------------------------------------------------------
 		--Creating a table that holds all the model id's in the framework for current solution and model group
@@ -102,6 +154,8 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 
 			CREATE TABLE #ATM_GM_PreparedData (Dummy int)
 
+			SET @FailPoint = 2 -- Failiure in creating the PreparedData table
+
 			SELECT @CMD = Value
 			FROM #ATM_GM_ModelingParameters
 			WHERE ModelID = @MID
@@ -113,6 +167,10 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 			ALTER Table #ATM_GM_PreparedData
 			DROP Column Dummy
 
+			SET @FailPoint = 3 -- Failiure in executing the data preperation SP
+
+			INSERT INTO @ModelGroupInfoLog(Step,StartTime)
+			SELECT 'DataPreperation-Model '+convert(varchar(5),@MID),GETUTCDATE()
 
 			SELECT @CMD = Value
 			FROM #ATM_GM_ModelingParameters
@@ -122,11 +180,20 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 			PRINT(@CMD)
 			EXEC(@CMD)
 
+			UPDATE @ModelGroupInfoLog
+			SET EndTime = GETUTCDATE()
+			where Step = 'DataPreperation-Model '+convert(varchar(5),@MID)
+
 			--SELECT * FROM  #ATM_GM_PreparedData -- For Testing
 
 			------------------------------------------------------------------
 			--Executing the model using the prepared data table
 			------------------------------------------------------------------
+
+			SET @FailPoint = 4 -- Failiure in executing the model
+
+			INSERT INTO @ModelGroupInfoLog(Step,StartTime)
+			SELECT 'Modeling-Model '+convert(varchar(5),@MID),GETUTCDATE()
 
 			SELECT @CMD = Value
 			FROM #ATM_GM_ModelingParameters
@@ -136,13 +203,44 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 			print(@CMD)
 			EXEC(@CMD)
 
+			UPDATE @ModelGroupInfoLog
+			SET EndTime = GETUTCDATE()
+			where Step = 'Modeling-Model '+convert(varchar(5),@MID)
 
 			DELETE FROM #ATM_GM_Models
 			WHERE ModelID = @MID
+
+			SET @MID = NULL
 		
 		END -- End of model loop
+
+		SELECT  @ModelGroupLogMessage = (SELECT Step,Secs FROM @ModelGroupInfoLog [L] ORDER BY 2 DESC FOR XML AUTO )	
+		SET @ModelGroupEndTime = GETUTCDATE()
+
+		EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_MainProcedure', 
+							@EngineName = 'MFG_Solutions', @ModuleName = 'MainProcedure', @SectionName = @SolutionName, 
+							@SubSectionName = @ModelGroupName, @LogEventMessage = @ModelGroupLogMessage, 
+							@StartDate = @ModelGroupStartTime, @EndDate = @ModelGroupEndTime, @LogEventType = 'I'	 
+
+		DELETE FROM @ModelGroupInfoLog
 
 
 		DELETE FROM #ATM_GM_ModelGroups
 		WHERE ModelGroupID = @MGID
 	END -- End of model group loop
+
+
+	SET @EndTime = GETUTCDATE()
+	SET @LogMessage = 'SolutionID = '+ISNULL(convert(varchar(5),@SolutionID),'NULL')+', ModelGroupID = '+ISNULL(convert(varchar(5),@ModelGroupID),'NULL')+', ModelID = '+ISNULL(convert(varchar(5),@ModelID),'NULL')
+	EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_MainProcedure', 
+							@EngineName = 'MFG_Solutions', @ModuleName = 'MainProcedure', @LogEventMessage = @LogMessage, 
+							@StartDate = @StartTime, @EndDate = @EndTime, @LogEventType = 'I'	
+
+END TRY
+
+	BEGIN CATCH    
+	SET @ErrorMessage = 'Fail Point: ' + CONVERT(VARCHAR(3), @FailPoint) + '. '+'SolutionID = '+ISNULL(convert(varchar(5),@SolutionID),'NULL')+', ModelGroupID = '+ISNULL(convert(varchar(5),@MGID),'NULL')+' ,ModelID = '+ISNULL(convert(varchar(5),@MID),'NULL') + ERROR_MESSAGE()
+	EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_MainProcedure', @EngineName = 'MFG_Solutions', @SectionName=@SolutionName,
+							@ModuleName = 'MainProcedure', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
+	RAISERROR (N'USP_EASY_CalculateMonitors::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)  
+END CATCH 
