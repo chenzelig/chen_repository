@@ -1,21 +1,25 @@
-insert into [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,DefaultValue)
+USE MFG_Solutions
+GO
+
+INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,DefaultValue)
 							VALUES	(	1	,	'QueryTemplate',	''		)
-insert into [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,DefaultValue)
+INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,DefaultValue)
 							VALUES	(	2	,	'ConnectionID',	''		)
-
-insert into [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,DefaultValue)
+INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,DefaultValue)
 							VALUES	(	3	,	'Creating Prepared Data Stored Procedure',	''		)
+INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,DefaultValue)
+							VALUES  (	4	,	'Prepared Data Schema','')
+INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,DefaultValue)
+							VALUES	(	5	,	'Modeling Stored Procedure','')
+INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,DefaultValue)
+							VALUES	(	6	,	'Connection Type','')
+INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,DefaultValue)
+							VALUES	(	7	,	'Raw Data Schema','')
 
-INSERT into [dbo].[GM_D_Parameters] Values(4,'Prepared Data Schemna','')
 
-INSERT into [dbo].[GM_D_Parameters] Values(5,'Modeling Stored Procedure','')
+INSERT INTO [dbo].[GM_D_Solutions] VALUES (-1,'Generic Solution')
 
-INSERT INTO [dbo].[GM_D_Parameters] Values(6,'Connection Type','')
-
-
-INSERT INTO [dbo].[GM_D_Solutions] Values (-1,'Generic Solution')
-
-INSERT INTO [dbo].[GM_D_ModelGroups] Values (-1,-1,'Generic Model Group',NULL)
+INSERT INTO [dbo].[GM_D_ModelGroups] VALUES (-1,-1,'Generic Model Group',NULL)
 
 SET IDENTITY_INSERT GM_D_Models ON
 INSERT INTO [dbo].[GM_D_Models] (ModelID,SolutionID,Product,Operation,DieStructure,Package,[Version/Specification],GenericColumn,ModelGroupID,IsBackground,IsProduction,IsIndicators)

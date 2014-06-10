@@ -156,7 +156,7 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 
 			SET @FailPoint = 2 -- Failiure in creating the PreparedData table
 
-			SELECT @CMD = Value
+			SELECT @CMD = 'ALTER TABLE #ATM_GM_PreparedData ADD '+Value
 			FROM #ATM_GM_ModelingParameters
 			WHERE ModelID = @MID
 			and ParameterId=4 -- Parameter 4 is Data preperation Attributes
