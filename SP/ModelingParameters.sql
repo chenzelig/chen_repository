@@ -28,14 +28,14 @@ CREATE PROCEDURE USP_ModelingParameters
 
 AS
 
-IF OBJECT_ID('tempdb..#GM_ModelingParametes') IS NOT NULL
-	DROP TABLE #GM_ModelingParametes
+IF OBJECT_ID('tempdb..#GM_ModelingParameters') IS NOT NULL
+	DROP TABLE #GM_ModelingParameters
 
 -------------------------------------------------------------------------
 -- Table that olds the parameters for each solution, model group id, and model id
 -------------------------------------------------------------------------
 
-CREATE TABLE #GM_ModelingParametes (
+CREATE TABLE #GM_ModelingParameters (
 	SolutionID int,
 	ModelGroupID int,
 	ModelID int,
@@ -44,63 +44,102 @@ CREATE TABLE #GM_ModelingParametes (
 	Value varchar(max)
 	)
 
-
 -------------------------------------------------------------------------------------
 -- Sets initial parametrs values for each SolutionID, ModelGroupID, and ModelID
 -------------------------------------------------------------------------------------
 
-INSERT INTO #GM_ModelingParametes (SolutionID,ModelGroupID,ModelID,FeatureID,ParameterID,Value)
+INSERT INTO #GM_ModelingParameters (SolutionID,ModelGroupID,ModelID,FeatureID,ParameterID,Value)
 SELECT
-	A.SolutionID,
-	A.ModelGroupID,
-	A.ModelID,
+	F.SolutionID,
+	F.ModelGroupID,
+	F.ModelID,
+	F.FeatureID,
+	P.ParameterID,
+	F.Value
+	FROM [dbo].[GM_F_ModelingParameters](nolock) F
+	INNER JOIN [dbo].[GM_D_Parameters] P
+	ON P.ParameterLevelId=4 --Feature parameters
+	WHERE FeatureID IS NOT NULL
+UNION
+SELECT
+	M.SolutionID,
+	M.ModelGroupID,
+	M.ModelID,
 	NULL as FeatureID,
 	P.ParameterID,
 	P.DefaultValue
-	FROM ( SELECT DISTINCT
-			SolutionID,
-			ModelGroupID,
-			ModelID
-			FROM GM_D_Models ) A, [dbo].[GM_D_Parameters] P
+	FROM GM_D_Models(nolock) M 
+	INNER JOIN [dbo].[GM_D_Parameters] P
+	ON P.ParameterLevelId=3 --Model parameters
+	WHERE ModelID<>-1
+UNION
+SELECT
+	MG.SolutionID,
+	MG.ModelGroupID,
+	NULL as ModelID,
+	NULL as FeatureID,
+	P.ParameterID,
+	P.DefaultValue
+	FROM GM_D_ModelGroups(nolock) MG 
+	INNER JOIN [dbo].[GM_D_Parameters] P
+	ON P.ParameterLevelId=2 --ModelGroup parameters
+	WHERE ModelGroupID<>-1
+UNION
+SELECT
+	S.SolutionID,
+	NULL as ModelGroupID,
+	NULL as ModelID,
+	NULL as FeatureID,
+	P.ParameterID,
+	P.DefaultValue
+	FROM GM_D_Solutions(nolock) S 
+	INNER JOIN [dbo].[GM_D_Parameters] P
+	ON P.ParameterLevelId=1 --Solution parameters
+	WHERE SolutionID<>-1
 
 -------------------------------------------------------------------------------------
 -- changes all parameters values in the SolutionID level
 -------------------------------------------------------------------------------------
 
 UPDATE M
-SET M.Value = MP.Value,M.FeatureID=MP.FeatureID FROM 
-#GM_ModelingParametes M JOIN GM_F_ModelingParameters MP
-ON M.SolutionID=MP.SolutionID AND M.ParameterID=MP.ParameterID
+SET M.Value = MP.Value
+   ,M.FeatureID=MP.FeatureID --check this logic - why featureID?
+FROM #GM_ModelingParameters M 
+INNER JOIN GM_F_ModelingParameters MP
+ON M.SolutionID=MP.SolutionID 
+ AND M.ParameterID=MP.ParameterID
 WHERE MP.ModelGroupID =-1
-AND MP.ModelID = -1
+ AND MP.ModelID = -1
 
 -------------------------------------------------------------------------------------
 -- changes all parameters values in the ModelGroupID level
 -------------------------------------------------------------------------------------
 
 UPDATE M
-SET M.Value = MP.Value,M.FeatureID=MP.FeatureID FROM 
-#GM_ModelingParametes M JOIN GM_F_ModelingParameters MP
+SET M.Value = MP.Value,M.FeatureID=MP.FeatureID 
+FROM #GM_ModelingParameters M 
+INNER JOIN GM_F_ModelingParameters MP
 ON M.SolutionID=MP.SolutionID
-AND M.ModelGroupID=MP.ModelGroupID
-AND M.ParameterID=MP.ParameterID
+ AND M.ModelGroupID=MP.ModelGroupID
+ AND M.ParameterID=MP.ParameterID
 WHERE MP.ModelID = -1
-AND MP.ModelGroupID <>-1
+ AND MP.ModelGroupID <>-1
 
 -------------------------------------------------------------------------------------
 -- changes all parameters values in the ModelID level
 -------------------------------------------------------------------------------------
 
 UPDATE M
-SET M.Value = MP.Value,M.FeatureID=MP.FeatureID FROM 
-#GM_ModelingParametes M JOIN GM_F_ModelingParameters MP
+SET M.Value = MP.Value,M.FeatureID=MP.FeatureID 
+FROM #GM_ModelingParameters M 
+INNER JOIN GM_F_ModelingParameters MP
 ON M.SolutionID=MP.SolutionID
-AND M.ModelGroupID=MP.ModelGroupID
-AND M.ModelID=MP.ModelID
-AND M.ParameterID=MP.ParameterID
+ AND M.ModelGroupID=MP.ModelGroupID
+ AND M.ModelID=MP.ModelID
+ AND M.ParameterID=MP.ParameterID
 WHERE MP.ModelID <> -1
-AND MP.ModelGroupID <>-1
+ AND MP.ModelGroupID <>-1
 
-SELECT * FROM #GM_ModelingParametes
-WHERE SolutionID <> -1 AND ModelGroupID <> -1 AND ModelID <> -1
+SELECT * FROM #GM_ModelingParameters
+
 
