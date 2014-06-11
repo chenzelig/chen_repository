@@ -242,5 +242,5 @@ END TRY
 	SET @ErrorMessage = 'Fail Point: ' + CONVERT(VARCHAR(3), @FailPoint) + '. '+'SolutionID = '+ISNULL(convert(varchar(5),@SolutionID),'NULL')+', ModelGroupID = '+ISNULL(convert(varchar(5),@MGID),'NULL')+' ,ModelID = '+ISNULL(convert(varchar(5),@MID),'NULL') + ERROR_MESSAGE()
 	EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_MainProcedure', @EngineName = 'MFG_Solutions', @SectionName=@SolutionName,
 							@ModuleName = 'MainProcedure', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
-	RAISERROR (N'USP_EASY_CalculateMonitors::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)  
+	RAISERROR (N'USP_GM_MainProcedure::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)  
 END CATCH 

@@ -1,3 +1,7 @@
+USE MFG_Solutions
+
+GO
+
 ---------------------------------------------------------
 -----------------------DROP TABLES-----------------------
 ---------------------------------------------------------
@@ -16,26 +20,37 @@ DROP TABLE GM_D_Models
 DROP TABLE GM_D_ModelGroups
 DROP TABLE GM_D_Features
 DROP TABLE GM_D_Parameters
+DROP TABLE GM_D_ParametersLevel
 DROP TABLE GM_D_Solutions
 DROP TABLE GM_D_DE_DataSource
 DROP TABLE GM_D_DE_Connections
+DROP TABLE GM_D_DE_ConnectionTypes
 
 
 --------------------------------------------------------------------------------------------
 -----------------------------------------Data Extraction------------------------------------
 --------------------------------------------------------------------------------------------
 
+CREATE TABLE GM_D_DE_ConnectionTypes (
+ConnectionTypeID int PRIMARY KEY,
+ConnectionTypeDesc varchar(100),
+ConnectionAttributes varchar(200)
+)
+
 CREATE TABLE GM_D_DE_Connections (
 ConnectionID int NOT NULL PRIMARY KEY,
 ConnectionDesc varchar(500) NOT NULL,
-Provider varchar(50) NOT NULL,
-ConnectionString varchar(1000) NOT NULL, -----ASK ERAN OR DAVID!!!!
-ConnUser varbinary(50) NOT NULL,
-ConnPass varbinary(50) NOT NULL,
-ServerName varbinary(100) NOT NULL,
+ConnectionTypeID int NOT NULL FOREIGN KEY REFERENCES GM_D_DE_ConnectionTypes(ConnectionTypeID),
+Provider varchar(50) NULL,
+ConnectionString varchar(1000) NULL, -----ASK ERAN OR DAVID!!!!
+ConnUser varbinary(50) NULL,
+ConnPass varbinary(50)  NULL,
+ServerName varbinary(100) NULL,
 ServiceName varchar(200) NULL,
 PortNo int NULL,
-SourceType varchar(20)
+SourceType varchar(20) NULL,
+Driver varchar(400) NULL,
+Module varchar(20) NULL,
 )
 
 CREATE TABLE GM_D_DE_DataSource (
@@ -54,9 +69,15 @@ SolutionID int NOT NULL PRIMARY KEY,
 SolutionDescription varchar(500) NOT NULL
 )
 
+CREATE TABLE GM_D_ParametersLevel (
+ParameterLevelID int PRIMARY KEY,
+ParameterLevel varchar(20)
+)
+
 CREATE TABLE GM_D_Parameters (
 ParameterID int NOT NULL PRIMARY KEY,
 ParameterDesc varchar(500) NOT NULL,
+ParameterLevelID int Foreign Key References GM_D_ParametersLevel(ParameterLevelID),
 DefaultValue varchar(500) NOT NULL
 )
 
@@ -81,7 +102,7 @@ CONSTRAINT PK_GM_D_ModelGroups PRIMARY KEY (ModelGroupID)
 )-- ON UPS_SolutionID_PartitionScheme(SolutionID)
 
 CREATE TABLE GM_D_Models (
-ModelID int identity(1,1) NOT NULL,
+ModelID int NOT NULL,
 SolutionID int NOT NULL,
 Product varchar(10) NOT NULL,  ----------CHECK DATATYPE!!!
 Operation varchar(50) NOT NULL,
