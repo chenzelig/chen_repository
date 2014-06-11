@@ -150,7 +150,7 @@ Set @FailPoint=5
 
 		INSERT INTO #ATM_GM_RawData
 		EXEC(@CMD)
-				
+
 	END
 	ELSE --Connection by OpenRowSet
 	BEGIN
@@ -159,10 +159,9 @@ Set @FailPoint=6
 		BEGIN
 
 				SET @CMD = '  
-						SELECT * INTO #T FROM
-						(SELECT  *
-						FROM OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + '''
-									) A ) B
+						SELECT *
+						INTO #T
+						FROM OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''') 
 					
 					
 						INSERT INTO #AddColumns			
@@ -200,8 +199,7 @@ Set @FailPoint=7
 			SET @CMD = '  
 						INSERT INTO #ATM_GM_RawData  
 						SELECT  *
-						FROM OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + '''
-									) A' 
+						FROM OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''')' 
 		END
 
 		PRINT(@CMD)
