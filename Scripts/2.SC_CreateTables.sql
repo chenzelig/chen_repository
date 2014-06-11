@@ -20,7 +20,7 @@ DROP TABLE GM_D_Models
 DROP TABLE GM_D_ModelGroups
 DROP TABLE GM_D_Features
 DROP TABLE GM_D_Parameters
-DROP TABLE GM_D_ParametersLevel
+DROP TABLE GM_D_ParameterLevels
 DROP TABLE GM_D_Solutions
 DROP TABLE GM_D_DE_DataSource
 DROP TABLE GM_D_DE_Connections
@@ -69,7 +69,7 @@ SolutionID int NOT NULL PRIMARY KEY,
 SolutionDescription varchar(500) NOT NULL
 )
 
-CREATE TABLE GM_D_ParametersLevel (
+CREATE TABLE GM_D_ParameterLevels (
 ParameterLevelID int PRIMARY KEY,
 ParameterLevel varchar(20)
 )
@@ -77,7 +77,7 @@ ParameterLevel varchar(20)
 CREATE TABLE GM_D_Parameters (
 ParameterID int NOT NULL PRIMARY KEY,
 ParameterDesc varchar(500) NOT NULL,
-ParameterLevelID int Foreign Key References GM_D_ParametersLevel(ParameterLevelID),
+ParameterLevelID int Foreign Key References GM_D_ParameterLevels(ParameterLevelID),
 DefaultValue varchar(500) NOT NULL
 )
 
