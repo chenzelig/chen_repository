@@ -91,13 +91,12 @@ Categorizing_Value varchar(16) NOT NULL, ----------CHECK DATATYPE!!!
 Distinctive_Value float NOT NULL,
 XMLTestCaption xml NOT NULL
 CONSTRAINT PK_GM_D_Features PRIMARY KEY (FeatureID,SolutionID)
-) ON UPS_SolutionID_PartitionScheme(SolutionID)
+)-- ON UPS_SolutionID_PartitionScheme(SolutionID)
 
 CREATE TABLE GM_D_ModelGroups (
 SolutionID int NOT NULL,
 ModelGroupID int NOT NULL,
-ModelGroupDescription varchar(500) NOT NULL,
-PreStep varchar(max) NULL  ----------CHECK DATATYPE!!!
+ModelGroupDescription varchar(500) NOT NULL
 CONSTRAINT PK_GM_D_ModelGroups PRIMARY KEY (ModelGroupID)
 )-- ON UPS_SolutionID_PartitionScheme(SolutionID)
 
@@ -108,7 +107,7 @@ Product varchar(10) NOT NULL,  ----------CHECK DATATYPE!!!
 Operation varchar(50) NOT NULL,
 DieStructure varchar(250) NOT NULL, ----------CHECK DATATYPE!!!
 Package varchar(10) NOT NULL, ----------CHECK DATATYPE!!!
-[Version/Specification] varchar(50) NOT NULL, ----------CHECK DATATYPE!!!
+[Version] varchar(50) NOT NULL, ----------CHECK DATATYPE!!!
 GenericColumn varchar(250) NOT NULL, ----------CHECK DATATYPE!!!
 ModelGroupID int NOT NULL,
 IsBackground BIT DEFAULT 0, -----------TO CHECK!!!
