@@ -1,14 +1,12 @@
 USE MFG_Solutions
 GO
 
+DELETE FROM [dbo].[GM_D_Models] where ModelID = -1
 DELETE FROM [dbo].[GM_D_ModelGroups] where ModelGroupID = -1
 DELETE FROM [dbo].[GM_D_Solutions] where SolutionID = -1
-DELETE FROM [dbo].[GM_D_Parameters] WHERE ParameterID = 7
-DELETE FROM [dbo].[GM_D_Parameters] WHERE ParameterID = 5
-DELETE FROM [dbo].[GM_D_Parameters] WHERE ParameterID = 5
-DELETE FROM [dbo].[GM_D_Parameters] WHERE ParameterID = 3
-DELETE FROM [dbo].[GM_D_Parameters] WHERE ParameterID = 1
-DELETE FROM GM_D_ParametersLevel WHERE ParameterLevelID in (1,2,3)
+DELETE FROM [dbo].[GM_D_Parameters]
+DELETE FROM [dbo].[GM_D_ParameterLevels] WHERE ParameterLevelID in (1,2,3,4)
+DELETE FROM [dbo].[GM_D_DE_ConnectionTypes]
 
 INSERT INTO GM_D_ParameterLevels(ParameterLevelID,ParameterLevel)
 						VALUES(			1,		'Solution'		)
@@ -23,9 +21,9 @@ INSERT INTO GM_D_ParameterLevels(ParameterLevelID,ParameterLevel)
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,ParameterLevelID,DefaultValue)
 							VALUES	(	1	,	'Queries For Data Extraction via XML',2,	''		)
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,ParameterLevelID,DefaultValue)
-							VALUES	(	3	,	'Data preparation Stored Procedure',2,	''	)
+							VALUES	(	3	,	'Data preparation Stored Procedure',3,	''	)
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,ParameterLevelID,DefaultValue)
-							VALUES  (	4	,	'Prepared Data Schema',2,'')
+							VALUES  (	4	,	'Prepared Data Schema',3,'')
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,ParameterLevelID,DefaultValue)
 							VALUES	(	5	,	'Modeling Stored Procedure',3,'')
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,ParameterDesc,ParameterLevelID,DefaultValue)
