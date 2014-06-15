@@ -103,7 +103,6 @@ SELECT
 
 UPDATE M
 SET M.Value = MP.Value
-   ,M.FeatureID=MP.FeatureID --check this logic - why featureID?
 FROM #GM_ModelingParameters M 
 INNER JOIN GM_F_ModelingParameters MP
 ON M.SolutionID=MP.SolutionID 
@@ -123,7 +122,6 @@ ON M.SolutionID=MP.SolutionID
  AND M.ModelGroupID=MP.ModelGroupID
  AND M.ParameterID=MP.ParameterID
 WHERE MP.ModelID = -1
- AND MP.ModelGroupID <>-1
 
 -------------------------------------------------------------------------------------
 -- changes all parameters values in the ModelID level
