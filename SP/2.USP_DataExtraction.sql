@@ -39,7 +39,7 @@ DECLARE
 @xmlQuery xml,
 @SourceType VARCHAR(20),
 @ConnUser varchar(50),
-@ConnPass varchar(50),
+@ConnPass varchar(1000),
 @ServerName varchar(100),
 @SerivceName varchar(200),
 @PortNo int,
@@ -145,7 +145,7 @@ Set @FailPoint=3
 
 		Set @FailPoint=5
 
-		SELECT @Module = C.Module,	@ConnPass = C.ConnPass
+		SELECT @Module = C.Module,	@ConnPass = convert(varchar(1000),DecryptByPassPhrase('select',C.ConnPass))
 		FROM [dbo].[GM_D_DE_Connections] C
 		WHERE ConnectionId = @ConnectionID
 
