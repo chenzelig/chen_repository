@@ -6,13 +6,14 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_DataExtraction]') AND type in (N'P', N'PC'))
-DROP PROCEDURE [dbo].[USP_DataExtraction]
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_GM_DataExtraction]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[USP_GM_DataExtraction]
+
 
 GO
 
 /*******************************************************           
-* Procedure:		[USP_DataExtraction]  
+* Procedure:		[USP_GM_DataExtraction]  
 *                                                              
 * Description:		Creating a table of configuration for each solution, model group and model that are in the data base
 * 
@@ -24,7 +25,7 @@ GO
 * 2014-6-09		Gil Ben Shalom		Creating the SP 
 *******************************************************/ 
 
-CREATE PROCEDURE USP_DataExtraction
+CREATE PROCEDURE USP_GM_DataExtraction
 
 @ModelGroupID int
 
@@ -68,61 +69,53 @@ SET @ModelGroupName = (SELECT TOP 1 ModelGroupDescription FROM
 							[dbo].[GM_D_ModelGroups]
 							WHERE ModelGroupID = @ModelGroupID)
 
-CREATE TABLE #ImportQueries
-(
- QueryNum int,
- ConnectionID int,
- Query varchar(max),
- )
+CREATE TABLE #ImportQueries(
+	 QueryNum int,
+	 ConnectionID int,
+	 Query varchar(max),
+)
 
- SELECT @xmlQuery = value
- FROM #ATM_GM_ModelingParameters
- WHERE ModelGroupID = @ModelGroupID
+SELECT @xmlQuery = value
+FROM #ATM_GM_ModelingParameters
+WHERE ModelGroupID = @ModelGroupID
  AND ParameterID=1 --ParameterID 1 is the query template
 
 INSERT INTO #ImportQueries (QueryNum,ConnectionID,Query)
 SELECT QueryNum=DS.value('(QueryNum)[1]','int'),
 	   QueryNum=DS.value('(ConnectionID)[1]','int'),
 	   Query=DS.value('(Query)[1]','varchar(max)')
-from @xmlQuery.nodes('Queries/Row') T(DS)
+FROM @xmlQuery.nodes('Queries/Row') T(DS)
 
-SET @MinQueryNum=(SELECT min(QueryNum)FROM #ImportQueries)
+SET @MinQueryNum=(SELECT MIN(QueryNum)FROM #ImportQueries)
 
--------------------------------------------------------------------------
--- Taking all openrowset details from the configuration table
--------------------------------------------------------------------------
 Set @FailPoint=2
-
--------------------------------------------------------------------------
--- Creating a table with columns names and data type for #ATM_GM_RawData table, using the query data
--------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------
+-- Creating a table with columns names and data type for adaptation of #ATM_GM_RawData table schema, using the query data
+----------------------------------------------------------------------------------------------------------------------------
 
 CREATE TABLE #AddColumns (name varchar(256),DataType varchar(256),max_length int,precision int)
 
--------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
 -- This loop is executing all queries for this model group and fills #ATM_GM_RawData table
--------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
 
 WHILE EXISTS(SELECT 1 FROM #ImportQueries)
 BEGIN
 
 Set @FailPoint=3
 
-	SET @QueryNum= (SELECT min(QueryNum)
-						FROM #ImportQueries)
+	SET @QueryNum= (SELECT MIN(QueryNum) FROM #ImportQueries)
 	
-	SET @ImportQuery = (SELECT Query
-					FROM #ImportQueries WHERE  QueryNum = @QueryNum)
-
-	SET @ConnectionID = (SELECT ConnectionID
-					FROM #ImportQueries WHERE  QueryNum = @QueryNum)
-
-	SET @ImportQuery = REPLACE(@ImportQuery,'''','''''')
-
-	Print (@ImportQuery)
-
-	SET @ConnectionType= (SELECT C.ConnectionTypeID FROM [dbo].[GM_D_DE_Connections] C
-							WHERE C.ConnectionID = @ConnectionID)
+	--Get the query and connection details
+	SELECT @ImportQuery = REPLACE(I.Query,'''',''''''),
+		   @ConnectionID = I.ConnectionID,
+		   @ConnectionType = C.ConnectionTypeID
+	FROM #ImportQueries I
+	INNER JOIN [dbo].[GM_D_DE_Connections](nolock) C
+	ON I.ConnectionID=C.ConnectionID
+	WHERE QueryNum = @QueryNum
+	
+	--Print (@ImportQuery)
 
 	IF @ConnectionType=2 --Connection by credentials
 	BEGIN
@@ -134,25 +127,28 @@ Set @FailPoint=3
 			SELECT @CMD = 'ALTER TABLE #ATM_GM_RawData ADD '+MAX(Value)
 			FROM #ATM_GM_ModelingParameters
 			WHERE ModelGroupID = @ModelGroupID
-			and ParameterId=7 -- Parameter 7 is Raw Data Attributes
+			and ParameterId=7 -- Parameter 7 is the Raw Data table schema
 
-			PRINT(@CMD)
+			--PRINT(@CMD)
 			EXEC(@CMD)
-
+			
+			--Dropping the dummy column from the table
 			ALTER TABLE #ATM_GM_RawData
 			DROP COLUMN Dummy
 		END
 
 		Set @FailPoint=5
 
-		SELECT @Module = C.Module,	@ConnPass = convert(varchar(1000),DecryptByPassPhrase('select',C.ConnPass))
-		FROM [dbo].[GM_D_DE_Connections] C
+		-------------------------------------------------------------------------------------
+		-- Taking all relevant details for credentials connection from the connections table
+		-------------------------------------------------------------------------------------
+		SELECT @Module = Module,	
+			   @ConnPass = convert(varchar(1000),DecryptByPassPhrase('select',ConnPass))
+		FROM [dbo].[GM_D_DE_Connections]
 		WHERE ConnectionId = @ConnectionID
 
 		SET @CMD = 'EXEC [AdvancedBIsystem].[dbo].[USP_VM2F_ImportDataFromMIDAS] @sqlCommand='''+@ImportQuery+''',@password='''+@ConnPass+''' , @receiveTimeout=5000000, 
-		@module='''+@Module+'''' ---TO DO!!!! Change the "iBI" to be configurable. In the Vmin solution we will use the exact same connection with a different @module
-
-		PRINT('INSERT INTO #ATM_GM_RawData'+char(13)+@CMD)
+		@module='''+@Module+''''
 
 		INSERT INTO #ATM_GM_RawData
 		EXEC(@CMD)
@@ -162,13 +158,19 @@ Set @FailPoint=3
 	ELSE --Connection by OpenRowSet
 	BEGIN
 		Set @FailPoint=6
-
-		SELECT @SourceType = C.SourceType, @ServerName = C.ServerName, 
-			@ConnUser = C.ConnUser, @ConnPass = C.ConnPass, @PortNo=C.PortNo,@ConnectionString=ConnectionString 
-		FROM [dbo].[GM_D_DE_Connections] C
+		-------------------------------------------------------------------------
+		-- Taking all openrowset details from the connections table
+		-------------------------------------------------------------------------
+		SELECT @SourceType = SourceType, 
+			   @ServerName = ServerName, 
+			   @ConnUser = ConnUser, 
+			   @ConnPass = ConnPass, 
+			   @PortNo = PortNo,
+			   @ConnectionString = ConnectionString 
+		FROM [dbo].[GM_D_DE_Connections]
 		WHERE ConnectionId = @ConnectionID
 
-		IF @QueryNum = @MinQueryNum ---TO DO!!!! find a better soulution for this
+		IF @QueryNum = @MinQueryNum
 		BEGIN
 
 				SET @CMD = '  
@@ -176,7 +178,7 @@ Set @FailPoint=3
 						INTO #T
 						FROM OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''') 
 					
-					
+						--get all the details for the columns needed to add to the table
 						INSERT INTO #AddColumns			
 						SELECT c.name,y.name DataType,c.max_length,c.precision
 						FROM tempdb.sys.tables t
@@ -196,18 +198,19 @@ Set @FailPoint=3
 								ADD ''+@SQL
 
 
-								PRINT(@SQL)
+								--PRINT(@SQL)
 								EXEC(@SQL)
 
+								--Dropping the dummy column from the table
 								ALTER TABLE #ATM_GM_RawData
 								DROP COLUMN Dummy
-
+								
 								INSERT INTO #ATM_GM_RawData
 								SELECT * FROM #T
 						'
 		END
 
-		ELSE BEGIN
+		ELSE BEGIN -- #ATM_GM_RawData table is already in the expected schema
 
 			Set @FailPoint=7
 			SET @CMD = '  
@@ -216,7 +219,7 @@ Set @FailPoint=3
 						FROM OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''')' 
 		END
 
-		PRINT(@CMD)
+		--PRINT(@CMD)
 		EXEC(@CMD)
 	END
 
@@ -226,7 +229,7 @@ END ----END of QueryLoop
 
 SET @EndTime = GETUTCDATE()
 SET @LogMessage = 'Sucsses'
-EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_DataExtraction', @SectionName=@ModelGroupName,
+EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_DataExtraction', @SectionName=@ModelGroupName,
 						@EngineName = 'MFG_Solutions', @ModuleName = 'DataExtraction', @LogEventMessage = @LogMessage, 
 						@StartDate = @StartTime, @EndDate = @EndTime, @LogEventType = 'I'	
 
@@ -235,8 +238,8 @@ END TRY
 BEGIN CATCH
 
 SET @ErrorMessage = 'Fail Point: ' + CONVERT(VARCHAR(3), @FailPoint) + ERROR_MESSAGE()
-EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_DataExtraction', @EngineName = 'MFG_Solutions', 
+EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_DataExtraction', @EngineName = 'MFG_Solutions', 
 						@ModuleName = 'DataExtraction', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
-RAISERROR (N'USP_DataExtraction::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)
+RAISERROR (N'USP_GM_DataExtraction::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)
 
 END CATCH

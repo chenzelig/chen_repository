@@ -36,16 +36,26 @@ BEGIN TRY
 ---------------DECLARE VARIABLES--------------------
 ----------------------------------------------------
 
-DECLARE @MGID int, @MID int, @SID int, @CMD varchar(max),
-@FailPoint int,@StartTime datetime = GETDATE(),@EndTime datetime,@ErrorMessage varchar(1000),@LogMessage varchar(1000),
-@ModelGroupLogMessage varchar (1000), @ModelGroupEndTime datetime,@ModelGroupStartTime datetime,@ModelGroupName varchar(100),@SolutionName varchar(100)
+DECLARE @MGID int, @MID int, @SID int, @CMD varchar(max),@FailPoint int,@StartTime datetime = GETDATE(),@EndTime datetime
+,@ErrorMessage varchar(1000),@LogMessage varchar(1000),@ModelGroupLogMessage varchar (1000), @ModelGroupEndTime datetime
+,@ModelGroupStartTime datetime,@ModelGroupName varchar(100),@SolutionName varchar(100)
 
-DECLARE @ModelGroupInfoLog TABLE (Step VARCHAR(100),
-		StartTime DATETIME,EndTime DATETIME, Secs AS DATEDIFF(SS,StartTime,EndTime))
+DECLARE @ModelGroupInfoLog TABLE (
+	Step VARCHAR(100),
+	StartTime DATETIME,
+	EndTime DATETIME, 
+	Secs AS DATEDIFF(SS,StartTime,EndTime)
+)
 
----------------------------------------------------------------------------------------
---Creating a table that holds the configuration for each solution,model group and model
----------------------------------------------------------------------------------------
+SET @LogMessage = 'Starting SolutionID = '+ISNULL(convert(varchar(5),@SolutionID),'NULL')+', ModelGroupID = '+ISNULL(convert(varchar(5),@ModelGroupID),'NULL')+', ModelID = '+ISNULL(convert(varchar(5),@ModelID),'NULL')
+EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_MainProcedure', 
+						@EngineName = 'MFG_Solutions', @ModuleName = 'MainProcedure', @LogEventMessage = @LogMessage, 
+						@StartDate = @StartTime, @EndDate = @EndTime, @LogEventType = 'I'	
+
+
+------------------------------------------------------------------------------------------------------------
+--Creating a table that holds the parameters configuration for each solution,model group, model and feature
+------------------------------------------------------------------------------------------------------------
 
 IF OBJECT_ID('tempdb..#ATM_GM_ModelingParameters') IS NOT NULL
 	DROP TABLE #ATM_GM_ModelingParameters
@@ -59,13 +69,13 @@ CREATE TABLE #ATM_GM_ModelingParameters (
 	Value varchar(max)
 	)
 
+-- Populate the table
 INSERT INTO #ATM_GM_ModelingParameters
-EXEC USP_ModelingParameters
+EXEC USP_GM_ModelingParameters
 
----------------------------------------------------------------------------------------
---Creating a table that holds all the solution id's in the framework
----------------------------------------------------------------------------------------
-
+-----------------------------------------------------------------------------------------------
+-- Creating a table that holds all the solutions/model groups/models for the current execution
+-----------------------------------------------------------------------------------------------
 
 IF OBJECT_ID('tempdb..#ATM_GM_ModelGroups') IS NOT NULL
 	DROP TABLE #ATM_GM_ModelGroups
@@ -73,33 +83,41 @@ IF OBJECT_ID('tempdb..#ATM_GM_ModelGroups') IS NOT NULL
 CREATE TABLE #ATM_GM_ModelGroups (SolutionId int,ModelGroupID int,ModelID Int)
 
 INSERT INTO #ATM_GM_ModelGroups
-SELECT S.SolutionID,MG.ModelGroupID,M.ModelID FROM [dbo].[GM_D_Solutions] S JOIN [dbo].[GM_D_ModelGroups] MG
-on S.SolutionID = MG.SolutionID
-join [dbo].[GM_D_Models] M on MG.ModelGroupID = M.ModelGroupID and MG.SolutionID = M.SolutionID
-WHERE S.SolutionID <> -1 and MG.ModelGroupID <> -1 and M.ModelID <> -1
-and S.SolutionID = isnull(@SolutionID,S.SolutionID)
-and MG.ModelGroupID = isnull(@ModelGroupID,MG.ModelGroupID)
-and M.ModelID = isnull(@ModelID,M.ModelID)
-AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
+SELECT S.SolutionID,MG.ModelGroupID,M.ModelID 
+FROM [dbo].[GM_D_Solutions] S 
+INNER JOIN [dbo].[GM_D_ModelGroups] MG
+ON S.SolutionID = MG.SolutionID
+INNER JOIN [dbo].[GM_D_Models] M 
+ON MG.ModelGroupID = M.ModelGroupID 
+ AND MG.SolutionID = M.SolutionID
+WHERE S.SolutionID <> -1 
+ AND MG.ModelGroupID <> -1 
+ AND M.ModelID <> -1
+ AND S.SolutionID = isnull(@SolutionID,S.SolutionID)
+ AND MG.ModelGroupID = isnull(@ModelGroupID,MG.ModelGroupID)
+ AND M.ModelID = isnull(@ModelID,M.ModelID)
+ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 
 ---------------------------------------------------------------------------------------
 --Executing the data extraction for each model group in the framework for current solution
 ---------------------------------------------------------------------------------------
 
-
 	WHILE EXISTS(SELECT 1 FROM #ATM_GM_ModelGroups)
 	BEGIN
+		-- Get the first model group to execute
+		SELECT @MGID= MIN(ModelGroupID)
+		FROM #ATM_GM_ModelGroups
 
-		SET @MGID= ( SELECT min(ModelGroupID)
-							 FROM #ATM_GM_ModelGroups)
-
-		SET @ModelGroupName = (SELECT TOP 1 ModelGroupDescription FROM 
-								[dbo].[GM_D_ModelGroups]
-								WHERE ModelGroupID = @MGID)
-
-	    SET @SolutionName = (SELECT TOP 1 SolutionDescription FROM
-		[dbo].[GM_D_Solutions] S INNER JOIN [GM_D_ModelGroups] MG on S.SolutionID = MG.SolutionID
-		AND MG.ModelGroupID=@MGID)
+		-- Taking names for logging		
+		SELECT @ModelGroupName=ModelGroupDescription,
+			   @SolutionName=SolutionDescription
+		FROM(
+			SELECT TOP 1 ModelGroupDescription,SolutionDescription
+			FROM [dbo].[GM_D_Solutions] S 
+			INNER JOIN [GM_D_ModelGroups] MG 
+			ON S.SolutionID = MG.SolutionID
+			 AND MG.ModelGroupID=@MGID
+		)A
 
 		SET @ModelGroupStartTime = GETUTCDATE()
 
@@ -110,16 +128,14 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 		IF OBJECT_ID('tempdb..#ATM_GM_RawData') IS NOT NULL
 			DROP TABLE #ATM_GM_RawData
 
-		CREATE TABLE #ATM_GM_RawData (Dummy int)
+		CREATE TABLE #ATM_GM_RawData (Dummy int) --Table created with dummy column that will be altered and dropped inside the data extraction module	
 
-		--------------TO DO!!!!!!!!!!!!!!! Add the execution of replacing parameters. will be configurated in the parameters table.
-
-		SET @FailPoint = 1 -- Failiure in the data extraction
+		SET @FailPoint = 1 -- Data extraction
 
 		INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 		SELECT 'DataExtraction',GETUTCDATE()
 
-		EXEC USP_DataExtraction @ModelGroupID= @MGID
+		EXEC USP_GM_DataExtraction @ModelGroupID= @MGID
 
 		UPDATE @ModelGroupInfoLog
 		SET EndTime = GETUTCDATE()
@@ -149,25 +165,26 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 			IF OBJECT_ID('tempdb..#ATM_GM_PreparedData') IS NOT NULL
 				DROP TABLE #ATM_GM_PreparedData
 
-			SET @MID= (SELECT min(ModelID)
-							FROM #ATM_GM_Models)
+			SELECT @MID= MIN(ModelID)
+			FROM #ATM_GM_Models
 
-			CREATE TABLE #ATM_GM_PreparedData (Dummy int)
+			CREATE TABLE #ATM_GM_PreparedData (Dummy int)--Table created with dummy column that will be altered and dropped in the next query
 
-			SET @FailPoint = 2 -- Failiure in creating the PreparedData table
+			SET @FailPoint = 2 -- Creating the PreparedData table
 
 			SELECT @CMD = 'ALTER TABLE #ATM_GM_PreparedData ADD '+Value
 			FROM #ATM_GM_ModelingParameters
 			WHERE ModelID = @MID
-			and ParameterId=4 -- Parameter 4 is Data preperation Attributes
+			 AND ParameterId=4 -- Parameter 4 is the PreparedData table schema
 
-			PRINT(@CMD)
+			--PRINT(@CMD)
 			EXEC(@CMD)
 
-			ALTER Table #ATM_GM_PreparedData
-			DROP Column Dummy
+			--Removing the dummy column
+			ALTER TABLE #ATM_GM_PreparedData
+			DROP COLUMN Dummy
 
-			SET @FailPoint = 3 -- Failiure in executing the data preperation SP
+			SET @FailPoint = 3 -- Executing the data preperation SP
 
 			INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 			SELECT 'DataPreperation-Model '+convert(varchar(5),@MID),GETUTCDATE()
@@ -175,9 +192,9 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 			SELECT @CMD = Value
 			FROM #ATM_GM_ModelingParameters
 			WHERE ModelID = @MID
-			and ParameterId=3 -- Parameter 3 i Data preperation SP
+			 AND ParameterId=3 -- Parameter 3 is the data preparation SP
 
-			PRINT(@CMD)
+			--PRINT(@CMD)
 			EXEC(@CMD)
 
 			UPDATE @ModelGroupInfoLog
@@ -190,7 +207,7 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 			--Executing the model using the prepared data table
 			------------------------------------------------------------------
 
-			SET @FailPoint = 4 -- Failiure in executing the model
+			SET @FailPoint = 4 -- executing the model
 
 			INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 			SELECT 'Modeling-Model '+convert(varchar(5),@MID),GETUTCDATE()
@@ -198,14 +215,14 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 			SELECT @CMD = Value
 			FROM #ATM_GM_ModelingParameters
 			WHERE ModelID = @MID
-			and ParameterId=5 -- Parameter 5 i the Model Execution
+			 AND ParameterId=5 -- Parameter 5 is the Model Execution
 
-			print(@CMD)
+			--PRINT(@CMD)
 			EXEC(@CMD)
 
 			UPDATE @ModelGroupInfoLog
 			SET EndTime = GETUTCDATE()
-			where Step = 'Modeling-Model '+convert(varchar(5),@MID)
+			WHERE Step = 'Modeling-Model '+convert(varchar(5),@MID)
 
 			DELETE FROM #ATM_GM_Models
 			WHERE ModelID = @MID
@@ -231,7 +248,7 @@ AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 
 
 	SET @EndTime = GETUTCDATE()
-	SET @LogMessage = 'SolutionID = '+ISNULL(convert(varchar(5),@SolutionID),'NULL')+', ModelGroupID = '+ISNULL(convert(varchar(5),@ModelGroupID),'NULL')+', ModelID = '+ISNULL(convert(varchar(5),@ModelID),'NULL')
+	SET @LogMessage = 'Fininshed SolutionID = '+ISNULL(convert(varchar(5),@SolutionID),'NULL')+', ModelGroupID = '+ISNULL(convert(varchar(5),@ModelGroupID),'NULL')+', ModelID = '+ISNULL(convert(varchar(5),@ModelID),'NULL')
 	EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_MainProcedure', 
 							@EngineName = 'MFG_Solutions', @ModuleName = 'MainProcedure', @LogEventMessage = @LogMessage, 
 							@StartDate = @StartTime, @EndDate = @EndTime, @LogEventType = 'I'	

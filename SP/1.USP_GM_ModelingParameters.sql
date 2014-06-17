@@ -6,13 +6,13 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_ModelingParameters]') AND type in (N'P', N'PC'))
-DROP PROCEDURE [dbo].[USP_ModelingParameters]
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_GM_ModelingParameters]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[USP_GM_ModelingParameters]
 
 GO
 
 /*******************************************************           
-* Procedure:		[USP_ModelingParameters]  
+* Procedure:		[USP_GM_ModelingParameters]  
 *                                                              
 * Description:		Creating a table of configuration for each solution, model group and model that are in the data base
 * 
@@ -24,7 +24,7 @@ GO
 * 2014-6-09		Gil Ben Shalom		Creating the SP 
 *******************************************************/ 
 
-CREATE PROCEDURE USP_ModelingParameters 
+CREATE PROCEDURE USP_GM_ModelingParameters 
 
 AS
 
@@ -60,7 +60,8 @@ SELECT
 	INNER JOIN [dbo].[GM_D_Parameters] P
 	ON P.ParameterLevelId=4 --Feature parameters
 	WHERE FeatureID IS NOT NULL
-UNION
+
+INSERT INTO #GM_ModelingParameters (SolutionID,ModelGroupID,ModelID,FeatureID,ParameterID,Value)
 SELECT
 	M.SolutionID,
 	M.ModelGroupID,
@@ -72,7 +73,8 @@ SELECT
 	INNER JOIN [dbo].[GM_D_Parameters] P
 	ON P.ParameterLevelId=3 --Model parameters
 	WHERE ModelID<>-1
-UNION
+
+INSERT INTO #GM_ModelingParameters (SolutionID,ModelGroupID,ModelID,FeatureID,ParameterID,Value)
 SELECT
 	MG.SolutionID,
 	MG.ModelGroupID,
@@ -84,7 +86,8 @@ SELECT
 	INNER JOIN [dbo].[GM_D_Parameters] P
 	ON P.ParameterLevelId=2 --ModelGroup parameters
 	WHERE ModelGroupID<>-1
-UNION
+
+INSERT INTO #GM_ModelingParameters (SolutionID,ModelGroupID,ModelID,FeatureID,ParameterID,Value)
 SELECT
 	S.SolutionID,
 	NULL as ModelGroupID,
@@ -123,9 +126,9 @@ ON M.SolutionID=MP.SolutionID
  AND M.ParameterID=MP.ParameterID
 WHERE MP.ModelID = -1
 
--------------------------------------------------------------------------------------
+------------------------------------------------------
 -- changes all parameters values in the ModelID level
--------------------------------------------------------------------------------------
+------------------------------------------------------
 
 UPDATE M
 SET M.Value = MP.Value,M.FeatureID=MP.FeatureID 
@@ -135,9 +138,10 @@ ON M.SolutionID=MP.SolutionID
  AND M.ModelGroupID=MP.ModelGroupID
  AND M.ModelID=MP.ModelID
  AND M.ParameterID=MP.ParameterID
-WHERE MP.ModelID <> -1
- AND MP.ModelGroupID <>-1
 
+------------------------------
+-- return all configurations
+------------------------------
 SELECT * FROM #GM_ModelingParameters
 
 
