@@ -208,6 +208,8 @@ Set @FailPoint=3
 								INSERT INTO #ATM_GM_RawData
 								SELECT * FROM #T
 						'
+				SELECT @LogMessage = ISNULL(@LogMessage+', ','bought ')+@@ROWCOUNT+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
+
 		END
 
 		ELSE BEGIN -- #ATM_GM_RawData table is already in the expected schema
@@ -221,6 +223,7 @@ Set @FailPoint=3
 
 		--PRINT(@CMD)
 		EXEC(@CMD)
+		SELECT @LogMessage = ISNULL(@LogMessage+', ','bought ')+@@ROWCOUNT+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
 	END
 
 DELETE FROM #ImportQueries WHERE QueryNum = @QueryNum
@@ -228,7 +231,7 @@ DELETE FROM #ImportQueries WHERE QueryNum = @QueryNum
 END ----END of QueryLoop
 
 SET @EndTime = GETUTCDATE()
-SET @LogMessage = 'Sucsses'
+SET @LogMessage = 'Sucssesfully'+@LogMessage
 EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_DataExtraction', @SectionName=@ModelGroupName,
 						@EngineName = 'MFG_Solutions', @ModuleName = 'DataExtraction', @LogEventMessage = @LogMessage, 
 						@StartDate = @StartTime, @EndDate = @EndTime, @LogEventType = 'I'	
