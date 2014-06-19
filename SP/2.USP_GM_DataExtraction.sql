@@ -152,7 +152,7 @@ Set @FailPoint=3
 
 		INSERT INTO #ATM_GM_RawData
 		EXEC(@CMD)
-
+		SELECT @LogMessage = ISNULL(@LogMessage+', ','bought ')+@@ROWCOUNT+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
 	END
 
 	ELSE --Connection by OpenRowSet
@@ -207,8 +207,7 @@ Set @FailPoint=3
 								
 								INSERT INTO #ATM_GM_RawData
 								SELECT * FROM #T
-						'
-				SELECT @LogMessage = ISNULL(@LogMessage+', ','bought ')+@@ROWCOUNT+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
+						'				
 
 		END
 
