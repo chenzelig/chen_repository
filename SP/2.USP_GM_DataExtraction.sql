@@ -152,9 +152,9 @@ Set @FailPoint=3
 
 		INSERT INTO #ATM_GM_RawData
 		EXEC(@CMD)
-		SELECT @LogMessage = ISNULL(@LogMessage+', ','bought ')+@@ROWCOUNT+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
+		SELECT @LogMessage = ISNULL(@LogMessage+', ','bought ')+convert(varchar(1000),@@ROWCOUNT)+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
 	END
-
+	
 	ELSE --Connection by OpenRowSet
 	BEGIN
 		Set @FailPoint=6
@@ -222,7 +222,7 @@ Set @FailPoint=3
 
 		--PRINT(@CMD)
 		EXEC(@CMD)
-		SELECT @LogMessage = ISNULL(@LogMessage+', ','bought ')+@@ROWCOUNT+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
+		SELECT @LogMessage = ISNULL(@LogMessage+', ','bought ')+convert(varchar(1000),@@ROWCOUNT)+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
 	END
 
 DELETE FROM #ImportQueries WHERE QueryNum = @QueryNum
@@ -230,7 +230,7 @@ DELETE FROM #ImportQueries WHERE QueryNum = @QueryNum
 END ----END of QueryLoop
 
 SET @EndTime = GETUTCDATE()
-SET @LogMessage = 'Sucssesfully'+@LogMessage
+SET @LogMessage = 'Sucssesfully '+@LogMessage
 EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_DataExtraction', @SectionName=@ModelGroupName,
 						@EngineName = 'MFG_Solutions', @ModuleName = 'DataExtraction', @LogEventMessage = @LogMessage, 
 						@StartDate = @StartTime, @EndDate = @EndTime, @LogEventType = 'I'	
@@ -239,7 +239,7 @@ END TRY
 
 BEGIN CATCH
 
-SET @ErrorMessage = 'Fail Point: ' + CONVERT(VARCHAR(3), @FailPoint) + ERROR_MESSAGE()
+SET @ErrorMessage = 'Fail Point: ' + CONVERT(VARCHAR(3), @FailPoint) +' '+ ERROR_MESSAGE()
 EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_DataExtraction', @EngineName = 'MFG_Solutions', 
 						@ModuleName = 'DataExtraction', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
 RAISERROR (N'USP_GM_DataExtraction::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)

@@ -32,7 +32,7 @@ IF OBJECT_ID('tempdb..#GM_ModelingParameters') IS NOT NULL
 	DROP TABLE #GM_ModelingParameters
 
 -------------------------------------------------------------------------
--- Table that olds the parameters for each solution, model group id, and model id
+-- Table that holds the parameters for each solution, model group id, and model id
 -------------------------------------------------------------------------
 
 CREATE TABLE #GM_ModelingParameters (
