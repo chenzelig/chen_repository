@@ -136,20 +136,11 @@ ALTER DATABASE [MFG_Solutions] SET  READ_WRITE
 GO
 
 --Permissions
-USE MFG_Solutions
+USE [MFG_Solutions]
 GO
-
-CREATE USER [GER\Advanced Analytics ATM] FOR LOGIN [GER\Advanced Analytics ATM]
+CREATE USER [AMR\ADVBI_PROD_PAP_Developer] FOR LOGIN [AMR\ADVBI_PROD_PAP_Developer]
 GO
-GRANT CONNECT TO [GER\Advanced Analytics ATM]
+USE [MFG_Solutions]
 GO
-GRANT SELECT TO [GER\Advanced Analytics ATM]
+ALTER ROLE [db_datareader] ADD MEMBER [AMR\ADVBI_PROD_PAP_Developer]
 GO
-
-IF @@SERVERNAME IN('EG1SPASQLTS1\SQL01','EG1SPASQLDV1\SQL01')
-BEGIN
-	GRANT ALTER TO [GER\Advanced Analytics ATM]
-	GRANT DELETE TO [GER\Advanced Analytics ATM]
-	GRANT EXECUTE TO [GER\Advanced Analytics ATM]
-	GRANT INSERT TO [GER\Advanced Analytics ATM]
-END
