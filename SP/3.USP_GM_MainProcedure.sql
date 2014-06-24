@@ -36,7 +36,7 @@ BEGIN TRY
 ---------------DECLARE VARIABLES--------------------
 ----------------------------------------------------
 
-DECLARE @MGID int, @MID int, @SID int, @CMD varchar(max),@FailPoint int,@StartTime datetime = GETDATE(),@EndTime datetime
+DECLARE @MGID int, @MID int, @SID int, @CMD varchar(max),@FailPoint int,@StartTime datetime = GETUTCDATE(),@EndTime datetime
 ,@ErrorMessage varchar(1000),@LogMessage varchar(1000),@ModelGroupLogMessage varchar (1000), @ModelGroupEndTime datetime
 ,@ModelGroupStartTime datetime,@ModelGroupName varchar(100),@SolutionName varchar(100)
 
