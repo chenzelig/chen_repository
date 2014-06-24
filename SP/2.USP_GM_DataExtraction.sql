@@ -152,7 +152,7 @@ Set @FailPoint=3
 
 		INSERT INTO #ATM_GM_RawData
 		EXEC(@CMD)
-		SELECT @LogMessage = ISNULL(@LogMessage+', ','bought ')+convert(varchar(1000),@@ROWCOUNT)+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
+		SELECT @LogMessage = ISNULL(@LogMessage+', ','brought ')+convert(varchar(1000),@@ROWCOUNT)+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
 	END
 	
 	ELSE --Connection by OpenRowSet
@@ -222,7 +222,7 @@ Set @FailPoint=3
 
 		--PRINT(@CMD)
 		EXEC(@CMD)
-		SELECT @LogMessage = ISNULL(@LogMessage+', ','bought ')+convert(varchar(1000),@@ROWCOUNT)+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
+		SELECT @LogMessage = ISNULL(@LogMessage+', ','brought ')+convert(varchar(1000),@@ROWCOUNT)+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
 	END
 
 DELETE FROM #ImportQueries WHERE QueryNum = @QueryNum
