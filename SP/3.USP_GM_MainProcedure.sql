@@ -133,7 +133,7 @@ WHERE S.SolutionID <> -1
 		SET @FailPoint = 1 -- Data extraction
 
 		INSERT INTO @ModelGroupInfoLog(Step,StartTime)
-		SELECT 'DataExtraction',GETUTCDATE()
+		SELECT 'DataExtraction-Model Group '+convert(varchar(5),@MGID),GETUTCDATE()
 
 		EXEC USP_GM_DataExtraction @ModelGroupID= @MGID
 
