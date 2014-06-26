@@ -147,7 +147,7 @@ Set @FailPoint=3
 		FROM [dbo].[GM_D_DE_Connections]
 		WHERE ConnectionId = @ConnectionID
 
-		SET @CMD = 'EXEC [AdvancedBIsystem].[dbo].[USP_VM2F_ImportDataFromMIDAS] @sqlCommand='''+@ImportQuery+''',@password='''+@ConnPass+''' , @receiveTimeout=5000000, 
+		SET @CMD = 'EXEC [AdvancedBIsystem].[dbo].[USP_VM2F_ImportDataFromMIDAS] @sqlCommand='''+@ImportQuery+''',@password='''+@ConnPass+''' , @receiveTimeout=50000000, 
 		@module='''+@Module+'''' + ',@numTries=1'
 
 		INSERT INTO #ATM_GM_RawData
