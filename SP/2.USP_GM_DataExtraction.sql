@@ -55,7 +55,7 @@ DECLARE
 @EndTime datetime,
 @ErrorMessage varchar(1000),
 @ModelGroupName varchar(100),
-@LogMessage varchar(1000),
+@LogMessage varchar(max),
 @ConnectionType int,
 @Module VARCHAR(20),
 @ConnectionID int,
@@ -163,7 +163,7 @@ Set @FailPoint=3
 			SET @CMD = 'EXEC [AdvancedBIsystem].[dbo].[USP_VM2F_ImportDataFromMIDAS] @sqlCommand=''select * from('+@ImportQuery+')Q where '+@DistributionField+'%'+convert(varchar(max),@NumDistributionGroups)+'='+convert(varchar(max),@i)+''',@password='''+@ConnPass+''' , @receiveTimeout=50000000, 
 			@module='''+@Module+'''' + ',@numTries=1'
 
-			PRINT (@CMD)
+			--PRINT (@CMD)
 
 			INSERT INTO #ATM_GM_RawData
 			EXEC(@CMD)
