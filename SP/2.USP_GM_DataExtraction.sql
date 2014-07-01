@@ -58,7 +58,10 @@ DECLARE
 @LogMessage varchar(1000),
 @ConnectionType int,
 @Module VARCHAR(20),
-@ConnectionID int
+@ConnectionID int,
+@i int,
+@DistributionField varchar(1000),
+@NumDistributionGroups int
 
 -------------------------------------------------------------------------
 -- Taking all queries for this model group from the configurations and putting them in a temp table
@@ -73,6 +76,8 @@ CREATE TABLE #ImportQueries(
 	 QueryNum int,
 	 ConnectionID int,
 	 Query varchar(max),
+	 DistributionField varchar(1000),
+	 NumDistributionGroups int
 )
 
 SELECT @xmlQuery = value
@@ -80,10 +85,12 @@ FROM #ATM_GM_ModelingParameters
 WHERE ModelGroupID = @ModelGroupID
  AND ParameterID=1 --ParameterID 1 is the query template
 
-INSERT INTO #ImportQueries (QueryNum,ConnectionID,Query)
+INSERT INTO #ImportQueries(QueryNum,ConnectionID,Query,DistributionField,NumDistributionGroups)
 SELECT QueryNum=DS.value('(QueryNum)[1]','int'),
-	   QueryNum=DS.value('(ConnectionID)[1]','int'),
-	   Query=DS.value('(Query)[1]','varchar(max)')
+	   ConnectionID=DS.value('(ConnectionID)[1]','int'),
+	   Query=DS.value('(Query)[1]','varchar(max)'),
+	   DistributionField=DS.value('(DistributionField)[1]','varchar(100)'),
+	   NumDistributionGroups=DS.value('(NumDistributionGroups)[1]','int')
 FROM @xmlQuery.nodes('Queries/Row') T(DS)
 
 SET @MinQueryNum=(SELECT MIN(QueryNum)FROM #ImportQueries)
@@ -109,7 +116,9 @@ Set @FailPoint=3
 	--Get the query and connection details
 	SELECT @ImportQuery = REPLACE(I.Query,'''',''''''),
 		   @ConnectionID = I.ConnectionID,
-		   @ConnectionType = C.ConnectionTypeID
+		   @ConnectionType = C.ConnectionTypeID,
+		   @DistributionField = ISNULL(I.DistributionField,'1'),
+		   @NumDistributionGroups = ISNULL(I.NumDistributionGroups,1)
 	FROM #ImportQueries I
 	INNER JOIN [dbo].[GM_D_DE_Connections](nolock) C
 	ON I.ConnectionID=C.ConnectionID
@@ -147,12 +156,21 @@ Set @FailPoint=3
 		FROM [dbo].[GM_D_DE_Connections]
 		WHERE ConnectionId = @ConnectionID
 
-		SET @CMD = 'EXEC [AdvancedBIsystem].[dbo].[USP_VM2F_ImportDataFromMIDAS] @sqlCommand='''+@ImportQuery+''',@password='''+@ConnPass+''' , @receiveTimeout=50000000, 
-		@module='''+@Module+'''' + ',@numTries=1'
+		--split the import into @NumDistributionGroups batches
+		SET @i=0
+		WHILE @i<@NumDistributionGroups
+		BEGIN
+			SET @CMD = 'EXEC [AdvancedBIsystem].[dbo].[USP_VM2F_ImportDataFromMIDAS] @sqlCommand=''select * from('+@ImportQuery+')Q where '+@DistributionField+'%'+convert(varchar(max),@NumDistributionGroups)+'='+convert(varchar(max),@i)+''',@password='''+@ConnPass+''' , @receiveTimeout=50000000, 
+			@module='''+@Module+'''' + ',@numTries=1'
 
-		INSERT INTO #ATM_GM_RawData
-		EXEC(@CMD)
-		SELECT @LogMessage = ISNULL(@LogMessage+', ','brought ')+convert(varchar(1000),@@ROWCOUNT)+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
+			PRINT (@CMD)
+
+			INSERT INTO #ATM_GM_RawData
+			EXEC(@CMD)
+			SELECT @LogMessage = ISNULL(@LogMessage+', ','brought ')+convert(varchar(1000),@@ROWCOUNT)+' rows for QueryNum '+convert(varchar(1000),@QueryNum)+' batch no.'+convert(varchar(1000),@i)
+			
+			SET @i=@i+1
+		END
 	END
 	
 	ELSE --Connection by OpenRowSet
