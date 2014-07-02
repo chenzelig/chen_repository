@@ -27,7 +27,11 @@ GO
 
 CREATE PROCEDURE USP_GM_DataExtraction
 
-@ModelGroupID int
+@ModelGroupID int,
+@NumRecoveryRetry int=0,
+@i int=0,
+@RecoveryQueryNum int=null,
+@LogMessage varchar(max)=null
 
 AS
 
@@ -44,7 +48,7 @@ DECLARE
 @ServerName varchar(100),
 @SerivceName varchar(200),
 @PortNo int,
-@QueryNum varchar(20),
+@QueryNum int,
 @MinQueryNum varchar(20),
 @ImportQuery varchar(max),
 @CMD varchar(max),
@@ -55,11 +59,9 @@ DECLARE
 @EndTime datetime,
 @ErrorMessage varchar(1000),
 @ModelGroupName varchar(100),
-@LogMessage varchar(max),
 @ConnectionType int,
 @Module VARCHAR(20),
 @ConnectionID int,
-@i int,
 @DistributionField varchar(1000),
 @NumDistributionGroups int
 
@@ -105,6 +107,8 @@ CREATE TABLE #AddColumns (name varchar(256),DataType varchar(256),max_length int
 -------------------------------------------------------------------------------------------
 -- This loop is executing all queries for this model group and fills #ATM_GM_RawData table
 -------------------------------------------------------------------------------------------
+IF @RecoveryQueryNum is not null --If we're back from recovery
+	DELETE FROM #ImportQueries WHERE QueryNum < @RecoveryQueryNum
 
 WHILE EXISTS(SELECT 1 FROM #ImportQueries)
 BEGIN
@@ -130,7 +134,7 @@ Set @FailPoint=3
 	BEGIN
 
 		Set @FailPoint=4
-		IF @QueryNum = @MinQueryNum --Means we need to create the schema of the table
+		IF @QueryNum = @MinQueryNum AND @RecoveryQueryNum IS NULL--Means we need to create the schema of the table
 		BEGIN
 			
 			SELECT @CMD = 'ALTER TABLE #ATM_GM_RawData ADD '+MAX(Value)
@@ -144,10 +148,16 @@ Set @FailPoint=3
 			--Dropping the dummy column from the table
 			ALTER TABLE #ATM_GM_RawData
 			DROP COLUMN Dummy
-		END
 
+		END
+		
 		Set @FailPoint=5
 
+		IF OBJECT_ID('tempdb..#TEMP_RawData') IS NOT NULL
+			DROP TABLE #TEMP_RawData
+		SELECT TOP 0 *
+		INTO #TEMP_RawData
+		FROM #ATM_GM_RawData
 		-------------------------------------------------------------------------------------
 		-- Taking all relevant details for credentials connection from the connections table
 		-------------------------------------------------------------------------------------
@@ -157,17 +167,29 @@ Set @FailPoint=3
 		WHERE ConnectionId = @ConnectionID
 
 		--split the import into @NumDistributionGroups batches
-		SET @i=0
+		IF NOT(@NumRecoveryRetry>0 AND @QueryNum=ISNULL(@RecoveryQueryNum,-1))--if back from recovery, start from same place
+			SET @i=0
+
 		WHILE @i<@NumDistributionGroups
 		BEGIN
+			
 			SET @CMD = 'EXEC [AdvancedBIsystem].[dbo].[USP_VM2F_ImportDataFromMIDAS] @sqlCommand=''select * from('+@ImportQuery+')Q where '+@DistributionField+'%'+convert(varchar(max),@NumDistributionGroups)+'='+convert(varchar(max),@i)+''',@password='''+@ConnPass+''' , @receiveTimeout=50000000, 
 			@module='''+@Module+'''' + ',@numTries=1'
 
 			--PRINT (@CMD)
+			
+			INSERT INTO #TEMP_RawData
+			EXEC(@CMD)
+
+			SELECT @LogMessage = ISNULL(@LogMessage+', ','brought ')+convert(varchar(max),COUNT(1))+' rows for QueryNum '+convert(varchar(1000),@QueryNum)+' batch no.'+convert(varchar(1000),@i)
+			FROM #TEMP_RawData
 
 			INSERT INTO #ATM_GM_RawData
-			EXEC(@CMD)
-			SELECT @LogMessage = ISNULL(@LogMessage+', ','brought ')+convert(varchar(1000),@@ROWCOUNT)+' rows for QueryNum '+convert(varchar(1000),@QueryNum)+' batch no.'+convert(varchar(1000),@i)
+			SELECT * FROM #TEMP_RawData
+			
+			TRUNCATE TABLE #TEMP_RawData
+
+			SET @NumRecoveryRetry = 0			
 			
 			SET @i=@i+1
 		END
@@ -258,8 +280,19 @@ END TRY
 BEGIN CATCH
 
 SET @ErrorMessage = 'Fail Point: ' + CONVERT(VARCHAR(3), @FailPoint) +' '+ ERROR_MESSAGE()
-EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_DataExtraction', @EngineName = 'MFG_Solutions', 
-						@ModuleName = 'DataExtraction', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
-RAISERROR (N'USP_GM_DataExtraction::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)
+SELECT @ErrorMessage
+IF @ErrorMessage not like '%Object reference not set to an instance of an object%' and @NumRecoveryRetry<5
+GOTO OTHERERROR
+	INSERT INTO dbo.IBI_FailingQueries(UTC_TimeStamp,Query)
+	SELECT GETUTCDATE(),'select * from('+@ImportQuery+')Q where '+@DistributionField+'%'+convert(varchar(max),@NumDistributionGroups)+'='+convert(varchar(max),@i)
 
+	SET @NumRecoveryRetry=ISNULL(@NumRecoveryRetry+1,1)
+	PRINT('Recovering from fail: '+convert(varchar(100),@NumRecoveryRetry))
+	EXEC dbo.USP_GM_DataExtraction @ModelGroupID=@ModelGroupID,@NumRecoveryRetry=@NumRecoveryRetry,@i=@i,@RecoveryQueryNum=@QueryNum,@LogMessage=@LogMessage
+	GOTO FINISH
+OTHERERROR:
+	EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_DataExtraction', @EngineName = 'MFG_Solutions', 
+							@ModuleName = 'DataExtraction', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
+	RAISERROR (N'USP_GM_DataExtraction::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)
+FINISH:
 END CATCH
