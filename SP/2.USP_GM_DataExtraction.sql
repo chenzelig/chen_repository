@@ -174,7 +174,7 @@ Set @FailPoint=3
 		BEGIN
 			
 			SET @CMD = 'EXEC [AdvancedBIsystem].[dbo].[USP_VM2F_ImportDataFromMIDAS] @sqlCommand=''select * from('+@ImportQuery+')Q where '+@DistributionField+'%'+convert(varchar(max),@NumDistributionGroups)+'='+convert(varchar(max),@i)+''',@password='''+@ConnPass+''' , @receiveTimeout=50000000, 
-			@module='''+@Module+'''' + ',@numTries=1'
+			@module='''+@Module+'''' + ',@numTries=1, @rowsInBatch=1000'
 
 			--PRINT (@CMD)
 			
