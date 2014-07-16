@@ -63,7 +63,8 @@ DECLARE
 @Module VARCHAR(20),
 @ConnectionID int,
 @DistributionField varchar(1000),
-@NumDistributionGroups int
+@NumDistributionGroups int,
+@Sucsess BIT =0
 
 -------------------------------------------------------------------------
 -- Taking all queries for this model group from the configurations and putting them in a temp table
@@ -172,24 +173,39 @@ Set @FailPoint=3
 
 		WHILE @i<@NumDistributionGroups
 		BEGIN
-			
+
 			SET @CMD = 'EXEC [AdvancedBIsystem].[dbo].[USP_VM2F_ImportDataFromMIDAS] @sqlCommand=''select * from('+@ImportQuery+')Q where '+@DistributionField+'%'+convert(varchar(max),@NumDistributionGroups)+'='+convert(varchar(max),@i)+''',@password='''+@ConnPass+''' , @receiveTimeout=50000000, 
 			@module='''+@Module+'''' + ',@numTries=1, @rowsInBatch=1000'
 
-			--PRINT (@CMD)
+			SET @Sucsess = 0
+
+			WHILE @Sucsess = 0
+			BEGIN
+
+				BEGIN TRY
+					--PRINT (@CMD)
 			
-			INSERT INTO #TEMP_RawData
-			EXEC(@CMD)
+					INSERT INTO #TEMP_RawData
+					EXEC(@CMD)
 
-			SELECT @LogMessage = ISNULL(@LogMessage+', ','brought ')+convert(varchar(max),COUNT(1))+' rows for QueryNum '+convert(varchar(1000),@QueryNum)+' batch no.'+convert(varchar(1000),@i)
-			FROM #TEMP_RawData
+					SELECT @LogMessage = ISNULL(@LogMessage+', ','brought ')+convert(varchar(max),COUNT(1))+' rows for QueryNum '+convert(varchar(1000),@QueryNum)+' batch no.'+convert(varchar(1000),@i)
+					FROM #TEMP_RawData
 
-			INSERT INTO #ATM_GM_RawData
-			SELECT * FROM #TEMP_RawData
+					INSERT INTO #ATM_GM_RawData
+					SELECT * FROM #TEMP_RawData
+
+					SET @Sucsess=1
+
+				END TRY
+
+				BEGIN CATCH
 			
-			TRUNCATE TABLE #TEMP_RawData
+					TRUNCATE TABLE #TEMP_RawData
+					SET @Sucsess = 0
 
-			SET @NumRecoveryRetry = 0			
+				END CATCH
+			
+			END		
 			
 			SET @i=@i+1
 		END
