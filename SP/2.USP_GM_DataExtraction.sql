@@ -194,6 +194,8 @@ Set @FailPoint=3
 					INSERT INTO #ATM_GM_RawData
 					SELECT * FROM #TEMP_RawData
 
+					TRUNCATE TABLE #TEMP_RawData
+
 					SET @Sucsess=1
 
 				END TRY
