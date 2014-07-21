@@ -30,7 +30,7 @@ CREATE TABLE #Temp2 (
 	[Predicted_Value]	FLOAT NOT NULL
 )
 
-DECLARE @Tests TABLE ( 
+CREATE TABLE #Tests ( 
 	[ID] INT IDENTITY(1,1),
 	[TP_Regex] VARCHAR(256),
 	[Search_Test_Name] VARCHAR(256),
@@ -41,7 +41,7 @@ DECLARE @Tests TABLE (
 	[PredictedValueColumn] VARCHAR(256),
 	PRIMARY KEY([TP_Regex], [Search_Test_Name])
 );
-INSERT INTO @Tests
+INSERT INTO #Tests
 SELECT	[TP_Regex], [Search_Test_Name], [LowSearchValue], [HighSearchValue], [Resolution], 
 		T1.[PartitionColumn] AS [ActualValueColumn], 
 		T2.[PartitionColumn] AS [PredictedValueColumn]
@@ -58,7 +58,7 @@ IF EXISTS (SELECT * FROM #Temp1 WHERE [PartitionKey] <> 0) BEGIN
 END
 
 IF EXISTS (SELECT A.[Program_Or_BI_Recipe_Name]
-			FROM #Temp1 A LEFT JOIN @Tests B
+			FROM #Temp1 A LEFT JOIN #Tests B
 				ON A.[Program_Or_BI_Recipe_Name] LIKE B.[TP_Regex]
 			GROUP BY A.[Program_Or_BI_Recipe_Name]
 			HAVING COUNT(DISTINCT B.[TP_Regex]) <> 1) BEGIN
@@ -83,8 +83,8 @@ CREATE TABLE [dbo].[Temp_VMIN_VLV_Indicators_Data] (
 	[Steps_WP]			INT
 );
 
-WHILE EXISTS (SELECT * FROM @Tests) BEGIN
-	DECLARE @TestID INT = (SELECT TOP 1 [ID] FROM @Tests);
+WHILE EXISTS (SELECT * FROM #Tests) BEGIN
+	DECLARE @TestID INT = (SELECT TOP 1 [ID] FROM #Tests);
 
 	DECLARE @SQL VARCHAR(MAX) = (SELECT '
 		INSERT INTO #Temp2
@@ -93,7 +93,7 @@ WHILE EXISTS (SELECT * FROM @Tests) BEGIN
 		WHERE	[Program_Or_BI_Recipe_Name] LIKE '''+[TP_Regex]+'''
 				AND ['+[ActualValueColumn]+'] > 0 
 				AND ['+[PredictedValueColumn]+'] IS NOT NULL'
-	FROM @Tests
+	FROM #Tests
 	WHERE [ID] = @TestID);
 
 	TRUNCATE TABLE #Temp2;
@@ -108,10 +108,10 @@ WHILE EXISTS (SELECT * FROM @Tests) BEGIN
 				([Actual_Value], [Predicted_Value], [LowSearchValue], [HighSearchValue], [Resolution])
 	FROM	#Temp1 A INNER JOIN #Temp2 B
 				ON A.[UnitID] = B.[UnitID]
-			CROSS JOIN @Tests T
+			CROSS JOIN #Tests T
 	WHERE	T.[ID] = @TestID;
 
-	DELETE FROM @Tests WHERE [ID] = @TestID;
+	DELETE FROM #Tests WHERE [ID] = @TestID;
 END
 
 SELECT *
@@ -119,3 +119,4 @@ FROM [dbo].[Temp_VMIN_VLV_Indicators_Data]
 
 DROP TABLE #Temp1;
 DROP TABLE #Temp2;
+DROP TABLE #Tests;
