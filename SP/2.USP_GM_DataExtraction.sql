@@ -28,9 +28,6 @@ GO
 CREATE PROCEDURE USP_GM_DataExtraction
 
 @ModelGroupID int,
-@NumRecoveryRetry int=0,
-@i int=0,
-@RecoveryQueryNum int=null,
 @LogMessage varchar(max)=null
 
 AS
@@ -41,6 +38,7 @@ BEGIN TRY
 -------------------------------------------------------------------------
 DECLARE
 
+@i int=0,
 @xmlQuery xml,
 @SourceType VARCHAR(20),
 @ConnUser varchar(50),
@@ -108,8 +106,6 @@ CREATE TABLE #AddColumns (name varchar(256),DataType varchar(256),max_length int
 -------------------------------------------------------------------------------------------
 -- This loop is executing all queries for this model group and fills #ATM_GM_RawData table
 -------------------------------------------------------------------------------------------
-IF @RecoveryQueryNum is not null --If we're back from recovery
-	DELETE FROM #ImportQueries WHERE QueryNum < @RecoveryQueryNum
 
 WHILE EXISTS(SELECT 1 FROM #ImportQueries)
 BEGIN
@@ -135,7 +131,7 @@ Set @FailPoint=3
 	BEGIN
 
 		Set @FailPoint=4
-		IF @QueryNum = @MinQueryNum AND @RecoveryQueryNum IS NULL--Means we need to create the schema of the table
+		IF @QueryNum = @MinQueryNum--Means we need to create the schema of the table
 		BEGIN
 			
 			SELECT @CMD = 'ALTER TABLE #ATM_GM_RawData ADD '+MAX(Value)
@@ -168,8 +164,8 @@ Set @FailPoint=3
 		WHERE ConnectionId = @ConnectionID
 
 		--split the import into @NumDistributionGroups batches
-		IF NOT(@NumRecoveryRetry>0 AND @QueryNum=ISNULL(@RecoveryQueryNum,-1))--if back from recovery, start from same place
-			SET @i=0
+
+		SET @i=0
 
 		WHILE @i<@NumDistributionGroups
 		BEGIN
