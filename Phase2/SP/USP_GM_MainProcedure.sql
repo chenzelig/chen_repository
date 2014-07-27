@@ -204,7 +204,7 @@ WHERE S.SolutionID <> -1
 								
 				ELSE --#ATM_GM_RawDataCopy was already populated
 				BEGIN
-					SELECT 'CopyingData from RawDataCopy to RawData'
+					Print 'CopyingData from RawDataCopy to RawData'
 					TRUNCATE Table #ATM_GM_RawData
 					INSERT INTO #ATM_GM_RawData
 					SELECT * FROM #ATM_GM_RawDataCopy
@@ -217,7 +217,6 @@ WHERE S.SolutionID <> -1
 					FROM #ATM_GM_ModelingParameters
 					WHERE ModelID = @MID
 					AND ParameterId=19 -- Parameter 19 is the PopulationFilter
-
 					--SELECT @CMD as DeleteStatement
 					PRINT(@CMD)
 					EXEC(@CMD)
