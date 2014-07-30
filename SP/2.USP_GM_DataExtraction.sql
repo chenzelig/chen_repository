@@ -27,8 +27,7 @@ GO
 
 CREATE PROCEDURE USP_GM_DataExtraction
 
-@ModelGroupID int,
-@LogMessage varchar(max)=null
+@ModelGroupID int
 
 AS
 
@@ -307,18 +306,8 @@ BEGIN CATCH
 
 SET @ErrorMessage = 'Fail Point: ' + CONVERT(VARCHAR(3), @FailPoint) +' '+ ERROR_MESSAGE()
 SELECT @ErrorMessage
---IF @ErrorMessage not like '%Object reference not set to an instance of an object%' and @ErrorMessage not like '%No connection could be made because the target machine actively refused it%' and @NumRecoveryRetry<7
---GOTO OTHER_ERROR
-	--INSERT INTO dbo.IBI_FailingQueries(UTC_TimeStamp,Query)
-	--SELECT GETUTCDATE(),'select * from('+@ImportQuery+')Q where '+@DistributionField+'%'+convert(varchar(max),@NumDistributionGroups)+'='+convert(varchar(max),@i)
-
-	--SET @NumRecoveryRetry=ISNULL(@NumRecoveryRetry+1,1)
-	--PRINT('Recovering from fail: '+convert(varchar(100),@NumRecoveryRetry))
-	--EXEC dbo.USP_GM_DataExtraction @ModelGroupID=@ModelGroupID,@NumRecoveryRetry=@NumRecoveryRetry,@i=@i,@RecoveryQueryNum=@QueryNum,@LogMessage=@LogMessage
-	--GOTO FINISH
---OTHER_ERROR:
 	EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_DataExtraction', @EngineName = 'MFG_Solutions', 
 							@ModuleName = 'DataExtraction', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
 	RAISERROR (N'USP_GM_DataExtraction::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)
---FINISH:
+
 END CATCH
