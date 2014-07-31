@@ -242,7 +242,7 @@ Set @FailPoint=3
 						SELECT *
 						INTO #T
 						FROM '+CASE WHEN @ConnectionType=1 THEN+ 'OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''')
-						'ELSE 'OPENQUERY('''+@ConnectionString+''') 'END +'
+						' WHEN @ConnectionType=3 THEN 'OPENQUERY('+@ConnectionString+',''' + @ImportQuery + ''') 'END +'
 					
 						--get all the details for the columns needed to add to the table
 						INSERT INTO #AddColumns			
@@ -284,10 +284,10 @@ Set @FailPoint=3
 						INSERT INTO #ATM_GM_RawData  
 						SELECT  *
 						FROM '+CASE WHEN @ConnectionType=1 THEN+ 'OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''')
-						'ELSE 'OPENQUERY('''+@ConnectionString+''') 'END
+						' WHEN @ConnectionType=3 THEN 'OPENQUERY('+@ConnectionString+',''' + @ImportQuery + ''') 'END
 		END
 
-		--PRINT(@CMD)
+		PRINT(@CMD)
 		EXEC(@CMD)
 		SELECT @LogMessage = ISNULL(@LogMessage+', ','brought ')+convert(varchar(1000),@@ROWCOUNT)+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
 	END

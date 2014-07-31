@@ -237,7 +237,7 @@ WHERE S.SolutionID <> -1
 			WHERE ModelID = @MID
 			 AND ParameterId=3 -- Parameter 3 is the data preparation SP
 
-			--PRINT(@CMD)
+			PRINT(@CMD)
 			EXEC(@CMD)
 
 			UPDATE @ModelGroupInfoLog

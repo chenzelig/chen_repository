@@ -55,16 +55,27 @@ GO
 EXEC master.dbo.sp_serveroption @server=N'LNK_DAAS_INTERNAL_IBI-DAAS', @optname=N'remote proc transaction promotion', @optvalue=N'true'
 GO
 
+GRANT EXECUTE ON xp_cmdshell TO [GER\sys_AAiBIDaaS]
 
-USE MFG_Solutions
+GO
+
+EXEC sp_xp_cmdshell_proxy_account 'GER\sys_AAiBIDaaS','grwrp37$'
+
+GO
+
+EXEC sp_grantdbaccess [GER\sys_AAiBIDaaS]
 
 GO
 
 -----------------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------User--------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
+USE EASY_System
 
+GO
 /****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:11 PM ******/
+
+if exists (SELECT 1 FROM sysusers where name = 'GER\sys_AAiBIDaaS')
 DROP USER [GER\sys_AAiBIDaaS]
 GO
 
@@ -76,11 +87,12 @@ ALTER ROLE [db_owner] ADD MEMBER [GER\sys_AAiBIDaaS]
 GO
 
 
-
 -----------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------Connection-----------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
+USE MFG_Solutions
 
+GO
 
 DELETE FROM [dbo].[GM_D_DE_Connections]
 WHERE ConnectionID = 2
@@ -191,7 +203,7 @@ SET Value =
 	   CONVERT(varchar(10),NULL) AS Package,
 	   SUBSTRING([6051_PROGRAM_NAME],8,2) AS Step
 	   from  [V_BM_POPAI_CHT_PHI_UNIT]
-	   where [6051_UPDATE_DATE]>=(GetUTCDate()-15)
+	   where [6051_UPDATE_DATE]>=(GetUTCDate()-40)
     </Query>
 	<DistributionField>DATEDIFF(GetUTCDate(),LOTS_End_Date_Time,day)</DistributionField>
 	<NumDistributionGroups>15</NumDistributionGroups>
@@ -220,7 +232,7 @@ SET Value =
 	   SUBSTRING([6262_PROGRAM_NAME],6,2) AS Package,
 	   SUBSTRING([6262_PROGRAM_NAME],8,2) AS Step
 	   from  [V_BM_POPAI_CHT_PHI_UNIT]
-       where [6262_UPDATE_DATE]>=(GetUTCDate()-15)
+       where [6262_UPDATE_DATE]>=(GetUTCDate()-40)
     </Query>
 	<DistributionField>DATEDIFF(GetUTCDate(),LOTS_End_Date_Time,day)</DistributionField>
 	<NumDistributionGroups>15</NumDistributionGroups>
