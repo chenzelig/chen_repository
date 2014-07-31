@@ -6,6 +6,7 @@ USE [master]
 GO
 
 /****** Object:  LinkedServer [LNK_DAAS_INTERNAL_IBI-DAAS]    Script Date: 7/30/2014 4:19:57 PM ******/
+IF EXISTS (SELECT 1 FROM sysservers WHERE SRVNAME = 'LNK_DAAS_INTERNAL_IBI-DAAS')
 EXEC master.dbo.sp_dropserver @server=N'LNK_DAAS_INTERNAL_IBI-DAAS', @droplogins='droplogins'
 GO
 
@@ -85,6 +86,37 @@ GO
 
 ALTER ROLE [db_owner] ADD MEMBER [GER\sys_AAiBIDaaS]
 GO
+
+USE AdvancedBI
+
+GO
+/****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:11 PM ******/
+
+if exists (SELECT 1 FROM sysusers where name = 'GER\sys_AAiBIDaaS')
+DROP USER [GER\sys_AAiBIDaaS]
+GO
+
+/****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:12 PM ******/
+CREATE USER [GER\sys_AAiBIDaaS] FOR LOGIN [GER\sys_AAiBIDaaS] WITH DEFAULT_SCHEMA=[dbo]
+GO
+
+ALTER ROLE [db_owner] ADD MEMBER [GER\sys_AAiBIDaaS]
+GO
+
+USE MFG_Solutions
+/****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:11 PM ******/
+
+if exists (SELECT 1 FROM sysusers where name = 'GER\sys_AAiBIDaaS')
+DROP USER [GER\sys_AAiBIDaaS]
+GO
+
+/****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:12 PM ******/
+CREATE USER [GER\sys_AAiBIDaaS] FOR LOGIN [GER\sys_AAiBIDaaS] WITH DEFAULT_SCHEMA=[dbo]
+GO
+
+ALTER ROLE [db_owner] ADD MEMBER [GER\sys_AAiBIDaaS]
+GO
+
 
 
 -----------------------------------------------------------------------------------------------------------------------------------------
