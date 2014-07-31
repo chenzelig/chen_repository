@@ -61,8 +61,8 @@ DECLARE
 @ConnectionID int,
 @DistributionField varchar(1000),
 @NumDistributionGroups int,
-@Sucsess BIT =0
-
+@Sucsess BIT =0,
+@LogMessage varchar(max)
 -------------------------------------------------------------------------
 -- Taking all queries for this model group from the configurations and putting them in a temp table
 -------------------------------------------------------------------------
@@ -220,7 +220,7 @@ Set @FailPoint=3
 		END
 	END
 	
-	ELSE --Connection by OpenRowSet
+	ELSE --Connection by OpenRowSet or linked server
 	BEGIN
 		Set @FailPoint=6
 		-------------------------------------------------------------------------
@@ -241,7 +241,8 @@ Set @FailPoint=3
 				SET @CMD = '  
 						SELECT *
 						INTO #T
-						FROM OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''') 
+						FROM '+CASE WHEN @ConnectionType=1 THEN+ 'OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''')
+						'ELSE 'OPENQUERY('''+@ConnectionString+''') 'END +'
 					
 						--get all the details for the columns needed to add to the table
 						INSERT INTO #AddColumns			
@@ -282,7 +283,8 @@ Set @FailPoint=3
 			SET @CMD = '  
 						INSERT INTO #ATM_GM_RawData  
 						SELECT  *
-						FROM OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''')' 
+						FROM '+CASE WHEN @ConnectionType=1 THEN+ 'OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''')
+						'ELSE 'OPENQUERY('''+@ConnectionString+''') 'END
 		END
 
 		--PRINT(@CMD)
