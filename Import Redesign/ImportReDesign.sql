@@ -83,6 +83,10 @@ GO
 /****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:12 PM ******/
 CREATE USER [GER\sys_AAiBIDaaS] FOR LOGIN [GER\sys_AAiBIDaaS] WITH DEFAULT_SCHEMA=[dbo]
 GO
+--select * from sysmembers
+--select * from sysusers
+--select * from sysgroupmembers
+
 
 ALTER ROLE [db_owner] ADD MEMBER [GER\sys_AAiBIDaaS]
 GO
@@ -132,13 +136,11 @@ WHERE ConnectionID = 2
 INSERT INTO [dbo].[GM_D_DE_Connections] (ConnectionID,ConnectionDesc,ConnectionTypeID,					ConnectionString,					SourceType)
 								VALUES	(		2,		'iBI OpenRowSet',		1,		'Driver={iBI DaaS}; Server=ibi-services.intel.com,9999;','MSDASQL')
 
-DELETE FROM [dbo].[GM_D_DE_ConnectionTypes]
-WHERE ConnectionTypeID = 3
+IF NOT EXISTS (SELECT 1 FROM [dbo].[GM_D_DE_ConnectionTypes] WHERE ConnectionTypeID =3)
 insert into [dbo].[GM_D_DE_ConnectionTypes] (ConnectionTypeID,ConnectionTypeDesc,ConnectionAttributes)
 									VALUES(			3,		'Linked Server',	'ConnectionString')
 
-DELETE FROM [dbo].[GM_D_DE_Connections]
-WHERE ConnectionID = 3
+IF NOT EXISTS(SELECT 1 FROM [dbo].[GM_D_DE_Connections] WHERE ConnectionID = 3)
 INSERT INTO [dbo].[GM_D_DE_Connections] (ConnectionID,ConnectionDesc,ConnectionTypeID,			ConnectionString	)
 								VALUES	(		3,	'iBI LinkedServer',		3,		'[LNK_DAAS_INTERNAL_IBI-DAAS]')
 
@@ -280,28 +282,28 @@ SET Value =
     <QueryNum>1</QueryNum>
 	<ConnectionID>3</ConnectionID>
     <Query>
-      SELECT CONVERT(varchar(50),NULL) AS [visual_id],
-[sort_lot],
-[sort_wafer_id] AS sort_wafer,
-[sort_x],
-[sort_y],
-[7721_INTERFACE_BIN] AS Interface_Bin,
-[7721_FUNCTIONAL_BIN] AS Functional_Bin,
-''7721'' AS Operation,
-[7721_FACILITY] AS Facility,
-[7721_PROGRAM_NAME] AS TP,
-[7721_DEVREVSTEP] AS DevRevStep,
-[7721_WORKWEEK] AS WW,
-[7721_UPDATE_DATE] AS LOTS_End_Date_Time,
-''CLASS'' AS SourceDomain,
-LEFT([7721_PROGRAM_NAME],3) AS Product,
-CONVERT(varchar(50),NULL) AS Segment,
-CONVERT(varchar(50),NULL) AS DieStructure,
-CONVERT(varchar(50),NULL) as Package,
-CONVERT(varchar(50),NULL) AS Step
-FROM  [V_BM_POPAI_SKL_UNIT_LEVEL_SOURCE]
-WHERE [7721_UPDATE_DATE]>=(GetUTCDate()-40) 
-AND [7721_INTERFACE_BIN] IS NOT NULL
+		SELECT CONVERT(varchar(50),NULL) AS [visual_id],
+		[sort_lot],
+		[sort_wafer_id] AS sort_wafer,
+		[sort_x],
+		[sort_y],
+		[7721_INTERFACE_BIN] AS Interface_Bin,
+		[7721_FUNCTIONAL_BIN] AS Functional_Bin,
+		''7721'' AS Operation,
+		[7721_FACILITY] AS Facility,
+		[7721_PROGRAM_NAME] AS TP,
+		[7721_DEVREVSTEP] AS DevRevStep,
+		[7721_WORKWEEK] AS WW,
+		[7721_UPDATE_DATE] AS LOTS_End_Date_Time,
+		''CLASS'' AS SourceDomain,
+		LEFT([7721_PROGRAM_NAME],3) AS Product,
+		CONVERT(varchar(50),NULL) AS Segment,
+		CONVERT(varchar(50),NULL) AS DieStructure,
+		CONVERT(varchar(50),NULL) as Package,
+		CONVERT(varchar(50),NULL) AS Step
+		FROM [V_BM_POPAI_SKL_UNIT_LEVEL_SOURCE]
+		WHERE [7721_UPDATE_DATE]>=(GetUTCDate()-40)
+		AND [7721_INTERFACE_BIN] IS NOT NULL
     </Query>
 	<DistributionField>DATEDIFF(GetUTCDate(),LOTS_End_Date_Time,day)</DistributionField>
 	<NumDistributionGroups>40</NumDistributionGroups>
