@@ -62,7 +62,8 @@ DECLARE
 @DistributionField varchar(1000),
 @NumDistributionGroups int,
 @Sucsess BIT =0,
-@LogMessage varchar(max)
+@LogMessage varchar(max),
+@TableSchemaAltered bit=0
 -------------------------------------------------------------------------
 -- Taking all queries for this model group from the configurations and putting them in a temp table
 -------------------------------------------------------------------------
@@ -126,17 +127,18 @@ Set @FailPoint=3
 	
 	--Print (@ImportQuery)
 
-	IF @ConnectionType=2 --Connection by credentials
-	BEGIN
-
-		Set @FailPoint=4
-		IF @QueryNum = @MinQueryNum--Means we need to create the schema of the table
-		BEGIN
-			
+	Set @FailPoint=4
+	IF @QueryNum = @MinQueryNum--Means we need to create the schema of the table
+	BEGIN	
+		IF EXISTS(select top 1 1 
+				  from #ATM_GM_ModelingParameters
+				  where ModelGroupID = @ModelGroupID
+				  and ParameterId=7)
+		BEGIN	
 			SELECT @CMD = 'ALTER TABLE #ATM_GM_RawData ADD '+MAX(Value)
 			FROM #ATM_GM_ModelingParameters
 			WHERE ModelGroupID = @ModelGroupID
-			and ParameterId=7 -- Parameter 7 is the Raw Data table schema
+			AND ParameterId=7 -- Parameter 7 is the Raw Data table schema
 
 			--PRINT(@CMD)
 			EXEC(@CMD)
@@ -145,7 +147,12 @@ Set @FailPoint=3
 			ALTER TABLE #ATM_GM_RawData
 			DROP COLUMN Dummy
 
+			SET @TableSchemaAltered=1
 		END
+	END
+
+	IF @ConnectionType=2 --Connection by credentials
+	BEGIN		
 		
 		Set @FailPoint=5
 
@@ -228,20 +235,20 @@ Set @FailPoint=3
 		-------------------------------------------------------------------------
 		SELECT @SourceType = SourceType, 
 			   @ServerName = ServerName, 
-			   @ConnUser = ConnUser, 
-			   @ConnPass = ConnPass, 
+			   @ConnUser = convert(varchar(50),ConnUser), 
+			   @ConnPass = convert(varchar(1000),DecryptByPassPhrase('select',ConnPass)), 
 			   @PortNo = PortNo,
 			   @ConnectionString = ConnectionString 
 		FROM [dbo].[GM_D_DE_Connections]
 		WHERE ConnectionId = @ConnectionID
 
-		IF @QueryNum = @MinQueryNum
+		IF @QueryNum = @MinQueryNum AND @TableSchemaAltered=0
 		BEGIN
 
 				SET @CMD = '  
 						SELECT *
 						INTO #T
-						FROM '+CASE WHEN @ConnectionType=1 THEN+ 'OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''')
+						FROM '+CASE WHEN @ConnectionType=1 THEN+ 'OPENROWSET('''+@SourceType+''','''+@ConnectionString+CASE WHEN (@ConnUser is not null and @ConnPass is not null) THEN ' Uid='+@ConnUser+'; Pwd='+ @ConnPass+';' ELSE '' END+''',''' + @ImportQuery + ''')
 						' WHEN @ConnectionType=3 THEN 'OPENQUERY('+@ConnectionString+',''' + @ImportQuery + ''') 'END +'
 					
 						--get all the details for the columns needed to add to the table
@@ -283,7 +290,7 @@ Set @FailPoint=3
 			SET @CMD = '  
 						INSERT INTO #ATM_GM_RawData  
 						SELECT  *
-						FROM '+CASE WHEN @ConnectionType=1 THEN+ 'OPENROWSET('''+@SourceType+''','''+@ConnectionString+''',''' + @ImportQuery + ''')
+						FROM '+CASE WHEN @ConnectionType=1 THEN+ 'OPENROWSET('''+@SourceType+''','''+@ConnectionString+CASE WHEN (@ConnUser is not null and @ConnPass is not null) THEN ' Uid='+@ConnUser+'; Pwd='+ @ConnPass+';' ELSE '' END+''',''' + @ImportQuery + ''')
 						' WHEN @ConnectionType=3 THEN 'OPENQUERY('+@ConnectionString+',''' + @ImportQuery + ''') 'END
 		END
 
