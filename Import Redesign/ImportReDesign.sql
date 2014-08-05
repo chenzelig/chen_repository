@@ -55,7 +55,7 @@ GO
 
 EXEC master.dbo.sp_serveroption @server=N'LNK_DAAS_INTERNAL_IBI-DAAS', @optname=N'remote proc transaction promotion', @optvalue=N'true'
 GO
-
+/*
 GRANT EXECUTE ON xp_cmdshell TO [GER\sys_AAiBIDaaS]
 
 GO
@@ -67,57 +67,7 @@ GO
 EXEC sp_grantdbaccess [GER\sys_AAiBIDaaS]
 
 GO
-
------------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------User--------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------------
-USE EASY_System
-
-GO
-/****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:11 PM ******/
-
-if exists (SELECT 1 FROM sysusers where name = 'GER\sys_AAiBIDaaS')
-DROP USER [GER\sys_AAiBIDaaS]
-GO
-
-/****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:12 PM ******/
-CREATE USER [GER\sys_AAiBIDaaS] FOR LOGIN [GER\sys_AAiBIDaaS] WITH DEFAULT_SCHEMA=[dbo]
-GO
-
-ALTER ROLE [db_owner] ADD MEMBER [GER\sys_AAiBIDaaS]
-GO
-
-USE AdvancedBI
-
-GO
-/****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:11 PM ******/
-
-if exists (SELECT 1 FROM sysusers where name = 'GER\sys_AAiBIDaaS')
-DROP USER [GER\sys_AAiBIDaaS]
-GO
-
-/****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:12 PM ******/
-CREATE USER [GER\sys_AAiBIDaaS] FOR LOGIN [GER\sys_AAiBIDaaS] WITH DEFAULT_SCHEMA=[dbo]
-GO
-
-ALTER ROLE [db_owner] ADD MEMBER [GER\sys_AAiBIDaaS]
-GO
-
-USE MFG_Solutions
-/****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:11 PM ******/
-
-if exists (SELECT 1 FROM sysusers where name = 'GER\sys_AAiBIDaaS')
-DROP USER [GER\sys_AAiBIDaaS]
-GO
-
-/****** Object:  User [GER\sys_AAiBIDaaS]    Script Date: 7/30/2014 4:22:12 PM ******/
-CREATE USER [GER\sys_AAiBIDaaS] FOR LOGIN [GER\sys_AAiBIDaaS] WITH DEFAULT_SCHEMA=[dbo]
-GO
-
-ALTER ROLE [db_owner] ADD MEMBER [GER\sys_AAiBIDaaS]
-GO
-
-
+*/
 
 -----------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------Connection-----------------------------------------------------------------
