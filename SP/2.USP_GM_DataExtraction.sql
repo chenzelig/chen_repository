@@ -294,7 +294,7 @@ Set @FailPoint=3
 						' WHEN @ConnectionType=3 THEN 'OPENQUERY('+@ConnectionString+',''' + @ImportQuery + ''') 'END
 		END
 
-		PRINT(@CMD)
+		--PRINT(@CMD)
 		EXEC(@CMD)
 		SELECT @LogMessage = ISNULL(@LogMessage+', ','brought ')+convert(varchar(1000),@@ROWCOUNT)+' rows for QueryNum '+convert(varchar(1000),@QueryNum)
 	END
