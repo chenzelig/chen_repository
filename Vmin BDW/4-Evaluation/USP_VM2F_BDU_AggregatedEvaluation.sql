@@ -1,7 +1,19 @@
 USE MPDExploration
 GO
 
-ALTER PROCEDURE USP_VM2F_BDU_AggregatedEvaluation
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_VM2F_BDU_AggregatedEvaluation]') AND type in (N'P', N'PC'))
+	DROP PROCEDURE [dbo].[USP_VM2F_BDU_AggregatedEvaluation]
+
+GO
+
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+CREATE PROCEDURE [dbo].[USP_VM2F_BDU_AggregatedEvaluation]
 	 @groupTable  NVARCHAR(1000)
 	,@FlatTable NVARCHAR(1000)
 	,@TargetTable NVARCHAR(1000) 
@@ -27,12 +39,7 @@ CREATE TABLE #GroupsList (GroupID INT )
        
 INSERT INTO #GroupsList (GroupID)
 SELECT CONVERT(int,value) as GroupID
-FROM [dbo].[UDF_GetStringTableFromList](@GroupsList)
-------------------------
-IF OBJECT_ID('tempdb..#DFF_LIST_ALL','U') IS NOT NULL
-	DROP TABLE #DFF_LIST_ALL
-       
-CREATE TABLE #DFF_LIST_ALL (DFF VARCHAR(MAX) )		
+FROM [dbo].[UDF_GetStringTableFromList](@GroupsList)	
 -----------------------
 DECLARE @currentGroupID INT
 
@@ -67,9 +74,6 @@ BEGIN
 		SELECT DFF=LEFT(VALUE, CASE WHEN CHARINDEX('+',VALUE)=0 THEN 1000 ELSE CHARINDEX('+',VALUE)-1 END)
 		FROM [dbo].[UDF_GetStringTableFromList](REPLACE(@Equation,'*',','))
 		WHERE VALUE LIKE 'DFF%' 		      
-
-		INSERT INTO #DFF_LIST_ALL
-		SELECT DFF FROM #DFF
 
 		SET @SQLString = 'SELECT @Test=''MAX_''+MAX(Domain)+ MAX(''_''+Corner)+ MAX(''_''+Flow)
 						  FROM ' + @groupTable + ' WHERE GroupID=' + cast(@currentGroupID as varchar)
@@ -150,10 +154,6 @@ END
 
 CLOSE GroupCursor;
 DEALLOCATE GroupCursor;
-
--- print DFF
-SELECT DISTINCT DFF 
-FROM #DFF_LIST_ALL
 
 -- Aggregation in a unitID level, cross Groups
 SET @CMD='

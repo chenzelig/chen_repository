@@ -1,46 +1,6 @@
-USE MPDExploration
-GO
 
--------------- create a modeling reuslts table and populate it from R output) -------------------------
+----------------------------- create a class test table for a specific product ---------------------------------------
 
---SELECT AttributeName, A.jobid
---FROM VM2Fsystem..ARS_AttributesInJob A 
---JOIN VM2Fsystem..ARS_Attributes B 
---        ON A.ProjectID=B.ProjectID 
---        AND A.AttributeID=B.AttributeID 
---WHERE A.ProjectID=127
---AND IsTarget=1
-
-IF OBJECT_ID (N'[MPDExploration]..VM2F_BDU_Class_UT_ModelingResults', N'U') IS NOT NULL
-	DROP TABLE [MPDExploration]..VM2F_BDU_Class_UT_ModelingResults;
-
-	
-CREATE TABLE VM2F_BDU_Class_UT_ModelingResults(
-	 [groupID] INT
-	,[Equation] VARCHAR(MAX)
-	,[Shift] FLOAT
-)
-
--- RUN MODELING IN R!!!!!!!!!!
-
--- UPDATE equations NA values 
-UPDATE VM2F_BDU_Class_UT_ModelingResults_653_693
-SET Equation=REPLACE(Equation,'NA*','0*')
-WHERE CHARINDEX('NA*',Equation)>0
-
--- update the classTest table with the Equation and Shift results from the modeling phase
-update A
-set A.Equation=B.Equation,
-A.Shift=B.Shift
-from VM2F_ClassTests A
-inner join VM2F_BDU_Class_UT_ModelingResults B
-on A.GroupID=B.GroupID
-
---select groupid,TestID, equation,shift 
---from VM2F_ClassTests 
---where groupid in (SELECT distinct GroupID from VM2F_BDU_Class_UT_ModelingResults) ORDER by 1
-
--- create a class test table for a specific product
 IF OBJECT_ID (N'[MPDExploration]..VM2F_BDU_Class_UT_ClassTests', N'U') IS NOT NULL
 	DROP TABLE [MPDExploration]..VM2F_BDU_Class_UT_ClassTests;
 
@@ -63,7 +23,7 @@ AND IsTarget=1)
 create index ix_VM2F_BDU_Class_UT_ClassTests_1 on VM2F_BDU_Class_UT_ClassTests(GroupID)
 create unique index ix_VM2F_BDU_Class_UT_ClassTests_2 on VM2F_BDU_Class_UT_ClassTests(TestID)
 
--- create a summary table 
+---------------------------------------- create a summary table -------------------------------------
 
 IF OBJECT_ID (N'[MPDExploration]..VM2F_BDU_Class_UT_ClassTestsSummary', N'U') IS NOT NULL
 	DROP TABLE [MPDExploration]..VM2F_BDU_Class_UT_ClassTestsSummary;
