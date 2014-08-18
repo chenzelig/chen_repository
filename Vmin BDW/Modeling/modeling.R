@@ -15,7 +15,16 @@ target.values.table<-"VM2F_BDU_Class_UT_Filtered_Target_Values_653_693"
 modeling.results.table<-"VM2F_BDU_Class_UT_ModelingResults_653_693"
 ####################################################################
 
-myconn <- set.connection(); #Set connection should be implemented according to each project
+myconn <- set.connection(); #Set connection should be implemented according to each Vmin project
+
+## Drop existing modeling results table
+query<-paste0("DROP TABLE ",modeling.results.table);
+sqlQuery(myconn, query);
+
+## Create a new modeling results table
+query<-paste0("CREATE TABLE ",modeling.results.table," ([groupID] INT,[Equation] VARCHAR(MAX),[Shift] FLOAT)");
+sqlQuery(myconn, query);
+
 groups<-get.groups(myconn,project.id)
 #groups<-groups[16]
 for (group in groups)
@@ -32,7 +41,7 @@ for (group in groups)
     ############################################################################
     cat("get.data\n")
     data <- get.data(myconn, product.id, group.id,view.prefix ,target.values.table);
-    
+        
     cat("get.ars.features\n")
     features <- get.ars.features(myconn, project.id, job.id);
     

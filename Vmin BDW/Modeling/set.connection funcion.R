@@ -1,7 +1,7 @@
 set.connection<-function(){
   serverName<- "haisqldev021"
-  userName<-"BIAdm"
-  password<-"1qazZAQA!"
+  userName<-""
+  password<-""
   
   return(odbcConnect(serverName,uid=userName,pwd=password));
 }
