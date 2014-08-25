@@ -4,14 +4,14 @@ USE MFG_Solutions
 -- modelGroup=5
 --model= 6,7
 INSERT INTO [dbo].[GM_D_Solutions]
-VALUES(2,'VM2F')
+VALUES(2,'VM2F_BDU_Class')
 
 INSERT INTO [dbo].[GM_D_ModelGroups]
-VALUES (1,5,'BDW')
+VALUES (2,5,'VM2F_BDU_Class_ULT'), (2,6,'VM2F_BDU_Class_ULX')
 
-INSERT INTO [dbo].[GM_D_Models] VALUES 
- (6,2,'ULT',1272,'All','All','',NULL,5,0,0,0)
-,(7,2,'ULX',1272,'All','All','',NULL,5,0,0,0)
+--INSERT INTO [dbo].[GM_D_Models] VALUES 
+-- (6,2,'ULT',1272,'All','All','',NULL,5,0,0,0)
+--,(7,2,'ULX',1272,'All','All','',NULL,5,0,0,0)
 
 SELECT * FROM [GM_F_ModelingParameters]
 order BY ParameterID
@@ -27,20 +27,26 @@ VALUES(2,5,-1,NULL,1,'???? needs to be written dynamicly according to the releva
 <Queries>
   <Row>
     <QueryNum>1</QueryNum>
-	<ConnectionID></ConnectionID>
+	<ConnectionID>4</ConnectionID>
     <Query>
     </Query>	
   </Row>
+</Queries>')
+
+,(2,6,-1,NULL,1,'???? needs to be written dynamicly according to the relevant lots and dffs
+<Queries>
   <Row>
-	<QueryNum>2</QueryNum>
-	<ConnectionID></ConnectionID>
-	<Query>
-	</Query>
+    <QueryNum>1</QueryNum>
+	<ConnectionID>4</ConnectionID>
+    <Query>
+    </Query>	
   </Row>
 </Queries>')
+
 ,(2,5,6,NULL,3,'USP_VM2F_BDW_ULT_DataPreparation') -- Data preparation Stored Procedure
 ,(2,5,7,NULL,3,'USP_VM2F_BDW_ULX_DataPreparation') -- Data preparation Stored Procedure
 ,(2,4,-1,NULL,4,'???') --Prepared Data Schema
 ,(2,5,6,NULL,5,'???') --Modeling Stored Procedure
 ,(2,5,7,NULL,5,'???') --Modeling Stored Procedure
 ,(2,5,-1,NULL,7,'????')--Raw Data Schema
+
