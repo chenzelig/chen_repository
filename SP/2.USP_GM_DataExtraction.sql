@@ -27,7 +27,7 @@ GO
 
 CREATE PROCEDURE USP_GM_DataExtraction
 
-@ModelGroupID int
+@ModelGroupID int, @ExecutionMode int --1 is for modeling and 2 is for indicators
 
 AS
 
@@ -63,15 +63,28 @@ DECLARE
 @NumDistributionGroups int,
 @Sucsess BIT =0,
 @LogMessage varchar(max),
-@TableSchemaAltered bit=0
+@TableSchemaAltered bit=0,
+@RawDataTableName varchar(max),
+@QueryTemplateParameterID int,
+@RawDataTableSchemaParameterID int
+-------------------------------------------------------------------------
+-- set execution parameters
+-------------------------------------------------------------------------
+Set @FailPoint=0
+
+SET @QueryTemplateParameterID = case @ExecutionMode when 1 then 1 when 2 then 20 end
+SET @RawDataTableName = case @ExecutionMode when 1 then '#ATM_GM_RawData' when 2 then '#ATM_GM_Indicators_RawData' end
+SET @RawDataTableSchemaParameterID = case @ExecutionMode when 1 then 7 when 2 then 21 end
+
+
+--SET @ModelGroupName = (SELECT TOP 1 ModelGroupDescription FROM 
+--							[dbo].[GM_D_ModelGroups]
+--							WHERE ModelGroupID = @ModelGroupID)
+
 -------------------------------------------------------------------------
 -- Taking all queries for this model group from the configurations and putting them in a temp table
 -------------------------------------------------------------------------
 Set @FailPoint=1
-
-SET @ModelGroupName = (SELECT TOP 1 ModelGroupDescription FROM 
-							[dbo].[GM_D_ModelGroups]
-							WHERE ModelGroupID = @ModelGroupID)
 
 CREATE TABLE #ImportQueries(
 	 QueryNum int,
@@ -84,7 +97,7 @@ CREATE TABLE #ImportQueries(
 SELECT @xmlQuery = value
 FROM #ATM_GM_ModelingParameters
 WHERE ModelGroupID = @ModelGroupID
- AND ParameterID=1 --ParameterID 1 is the query template
+ AND ParameterID = @QueryTemplateParameterID
 
 INSERT INTO #ImportQueries(QueryNum,ConnectionID,Query,DistributionField,NumDistributionGroups)
 SELECT QueryNum=DS.value('(QueryNum)[1]','int'),
@@ -133,19 +146,21 @@ Set @FailPoint=3
 		IF EXISTS(select top 1 1 
 				  from #ATM_GM_ModelingParameters
 				  where ModelGroupID = @ModelGroupID
-				  and ParameterId=7)
+				  and ParameterId=@RawDataTableSchemaParameterID)
 		BEGIN	
-			SELECT @CMD = 'ALTER TABLE #ATM_GM_RawData ADD '+MAX(Value)
+			SELECT @CMD = 'ALTER TABLE '+@RawDataTableName+' ADD '+MAX(Value)
 			FROM #ATM_GM_ModelingParameters
 			WHERE ModelGroupID = @ModelGroupID
-			AND ParameterId=7 -- Parameter 7 is the Raw Data table schema
+			AND ParameterId=@RawDataTableSchemaParameterID
 
 			--PRINT(@CMD)
 			EXEC(@CMD)
 			
 			--Dropping the dummy column from the table
-			ALTER TABLE #ATM_GM_RawData
-			DROP COLUMN Dummy
+			SET @CMD = 'ALTER TABLE '+@RawDataTableName+'
+						DROP COLUMN Dummy'
+			
+			EXEC(@CMD)
 
 			SET @TableSchemaAltered=1
 		END
@@ -158,9 +173,20 @@ Set @FailPoint=3
 
 		IF OBJECT_ID('tempdb..#TEMP_RawData') IS NOT NULL
 			DROP TABLE #TEMP_RawData
-		SELECT TOP 0 *
-		INTO #TEMP_RawData
-		FROM #ATM_GM_RawData
+		CREATE TABLE #TEMP_RawData(Dummy int)
+		
+		SELECT @CMD = 'ALTER TABLE #TEMP_RawData ADD '+MAX(Value)
+		FROM #ATM_GM_ModelingParameters
+		WHERE ModelGroupID = @ModelGroupID
+		AND ParameterId=@RawDataTableSchemaParameterID
+
+		--PRINT(@CMD)
+		EXEC(@CMD)
+			
+		--Dropping the dummy column from the table
+		ALTER TABLE #TEMP_RawData
+		DROP COLUMN Dummy
+
 		-------------------------------------------------------------------------------------
 		-- Taking all relevant details for credentials connection from the connections table
 		-------------------------------------------------------------------------------------
@@ -193,8 +219,10 @@ Set @FailPoint=3
 					SELECT @LogMessage = ISNULL(@LogMessage+', ','brought ')+convert(varchar(max),COUNT(1))+' rows for QueryNum '+convert(varchar(1000),@QueryNum)+' batch no.'+convert(varchar(1000),@i)
 					FROM #TEMP_RawData
 
-					INSERT INTO #ATM_GM_RawData
-					SELECT * FROM #TEMP_RawData
+					SET @CMD = 'INSERT INTO '+@RawDataTableName+'
+					SELECT * FROM #TEMP_RawData'
+
+					EXEC(@CMD)
 
 					TRUNCATE TABLE #TEMP_RawData
 
@@ -267,7 +295,7 @@ Set @FailPoint=3
 																																						else '''' end
 								FROM #AddColumns
 
-								SET @SQL=''ALTER TABLE #ATM_GM_RawData
+								SET @SQL=''ALTER TABLE '+@RawDataTableName+'
 								ADD ''+@SQL
 
 
@@ -275,10 +303,10 @@ Set @FailPoint=3
 								EXEC(@SQL)
 
 								--Dropping the dummy column from the table
-								ALTER TABLE #ATM_GM_RawData
+								ALTER TABLE '+@RawDataTableName+'
 								DROP COLUMN Dummy
 								
-								INSERT INTO #ATM_GM_RawData
+								INSERT INTO '+@RawDataTableName+'
 								SELECT * FROM #T
 						'				
 
@@ -288,7 +316,7 @@ Set @FailPoint=3
 
 			Set @FailPoint=7
 			SET @CMD = '  
-						INSERT INTO #ATM_GM_RawData  
+						INSERT INTO '+@RawDataTableName+'  
 						SELECT  *
 						FROM '+CASE WHEN @ConnectionType=1 THEN+ 'OPENROWSET('''+@SourceType+''','''+@ConnectionString+CASE WHEN (@ConnUser is not null and @ConnPass is not null) THEN ' Uid='+@ConnUser+'; Pwd='+ @ConnPass+';' ELSE '' END+''',''' + @ImportQuery + ''')
 						' WHEN @ConnectionType=3 THEN 'OPENQUERY('+@ConnectionString+',''' + @ImportQuery + ''') 'END
