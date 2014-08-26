@@ -1,15 +1,17 @@
-USE MFG_Solutions
-GO
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
+USE [MFG_Solutions]
 GO
 
 IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_GM_MainProcedure]') AND type in (N'P', N'PC'))
 DROP PROCEDURE [dbo].[USP_GM_MainProcedure]
-
 GO
+
+/****** Object:  StoredProcedure [dbo].[USP_GM_MainProcedure]    Script Date: 8/5/2014 12:42:51 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 
 /*******************************************************           
 * Procedure:		[USP_GM_MainProcedure]  
@@ -22,9 +24,10 @@ GO
 * Date			Modified By			Modification:                         
 * ----			-----------			--------------------         
 * 2014-6-09		Gil Ben Shalom		Creating the SP 
+* 2014-08-07    Neiman, Jacob		Adding Evaluation part 
 *******************************************************/ 
 
-CREATE PROCEDURE USP_GM_MainProcedure
+CREATE PROCEDURE [dbo].[USP_GM_MainProcedure]
 
 @SolutionID int=NULL,@ModelGroupID int = NULL, @ModelID int =NULL
 
@@ -39,7 +42,7 @@ BEGIN TRY
 
 DECLARE @MGID int, @MID int, @SID int, @CMD varchar(max),@FailPoint int,@StartTime datetime = GETUTCDATE(),@EndTime datetime
 ,@ErrorMessage varchar(1000),@LogMessage varchar(1000),@ModelGroupLogMessage varchar (1000), @ModelGroupEndTime datetime
-,@ModelGroupStartTime datetime,@ModelGroupName varchar(100),@SolutionName varchar(100)
+,@ModelGroupStartTime datetime,@ModelGroupName varchar(100),@SolutionName varchar(100),@Formula varchar(max)
 
 DECLARE @ModelGroupInfoLog TABLE (
 	Step VARCHAR(100),
@@ -81,10 +84,10 @@ EXEC USP_GM_ModelingParameters
 IF OBJECT_ID('tempdb..#ATM_GM_ModelGroups') IS NOT NULL
 	DROP TABLE #ATM_GM_ModelGroups
 
-CREATE TABLE #ATM_GM_ModelGroups (SolutionId int,ModelGroupID int,ModelID Int)
+CREATE TABLE #ATM_GM_ModelGroups (SolutionId int,ModelGroupID int,ModelID Int,IsIndicators int)
 
 INSERT INTO #ATM_GM_ModelGroups
-SELECT S.SolutionID,MG.ModelGroupID,M.ModelID 
+SELECT S.SolutionID,MG.ModelGroupID,M.ModelID
 FROM [dbo].[GM_D_Solutions] S 
 INNER JOIN [dbo].[GM_D_ModelGroups] MG
 ON S.SolutionID = MG.SolutionID
@@ -99,6 +102,7 @@ WHERE S.SolutionID <> -1
  AND M.ModelID = isnull(@ModelID,M.ModelID)
  AND coalesce(@SolutionID,@ModelGroupID,@ModelID) is not null
 
+ --select * from #ATM_GM_ModelGroups
 ---------------------------------------------------------------------------------------
 --Executing the data extraction for each model group in the framework for current solution
 ---------------------------------------------------------------------------------------
@@ -260,12 +264,35 @@ WHERE S.SolutionID <> -1
 			WHERE ModelID = @MID
 			 AND ParameterId=5 -- Parameter 5 is the Model Execution
 
-			--PRINT(@CMD)
+			PRINT(@CMD)
 			EXEC(@CMD)
 
 			UPDATE @ModelGroupInfoLog
 			SET EndTime = GETUTCDATE()
 			WHERE Step = 'Modeling-Model '+convert(varchar(5),@MID)
+			
+			--Evaluate only if Evaluation params were configured
+			IF ((select count(*) from [dbo].[GM_F_ModelEvaluation] where ModelID = @MID) > 0) BEGIN
+				--Adding a formula column to #PreparedData 
+				--insert modeling formula as a checkfunction			
+				select @Formula = [dbo].[UDF_GM_GetFormulaString](@MID,@SolutionID)
+				print(@Formula)
+
+				SELECT @CMD = 'ALTER TABLE #ATM_GM_PreparedData ADD [PREDICTION] as ' +@Formula + ' '
+
+				--PRINT(@CMD)
+				EXEC(@CMD)
+
+				--select * from #ATM_GM_PreparedData --for Debug
+			
+				EXEC [dbo].[USP_GM_EvaluationProcedure] @ModelID=@MID
+			
+			END
+
+
+			--INDICATORS!!!!
+			exec [dbo].[USP_GM_IndicatorProcedure] @ModelID =100
+			--INDICATORS!!!!
 
 			DELETE FROM #ATM_GM_Models
 			WHERE ModelID = @MID
@@ -307,3 +334,5 @@ END TRY
 							@ModuleName = 'MainProcedure', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
 	RAISERROR (N'USP_GM_MainProcedure::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)  
 END CATCH 
+GO
+
