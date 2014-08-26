@@ -7,7 +7,7 @@ CREATE TABLE [dbo].[GM_F_ModelIndicators](
 	[ModelID] [int] NOT NULL,
 	[IndicatorLevelID] [int] NOT NULL,
 	[IndicatorID] [int] NOT NULL,
-	TargetDataTable [varchar](1000) NOT NULL,
+	[DataTableIDs] [varchar](1000) NOT NULL,
  CONSTRAINT [PK_GM_F_ModelIndicators] PRIMARY KEY CLUSTERED 
 (
 	[SolutionID] ASC,

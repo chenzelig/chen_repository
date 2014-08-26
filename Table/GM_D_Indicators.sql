@@ -6,7 +6,7 @@ CREATE TABLE [dbo].[GM_D_Indicators](
 	[IndicatorID] [int] NOT NULL,
 	[IndicatorName] [varchar](50) NOT NULL,
 	[IndicatorDefinition] [varchar](1000) NOT NULL,
-	[IndicatorCalculatedFieldIDs] [varchar](1000) NOT NULL,
+	[IndicatorCalculatedFieldIDs] [varchar](1000),
  CONSTRAINT [PK_GM_D_Indicators] PRIMARY KEY CLUSTERED 
 (
 	[IndicatorID] ASC

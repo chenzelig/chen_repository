@@ -24,7 +24,7 @@ BEGIN TRY
 
 	DECLARE @ErrorMessage nvarchar(max),@EvalQuery nvarchar(max)='',@TargetAttribute nvarchar(max),@StartTime datetime = GETUTCDATE(),@LogMessage varchar(1000),@EndTime datetime,@i int =1
 			,@MaxEvalIndex int,@outerSelect nvarchar(max)='',@innerSelect nvarchar(max),@j int,@MaxDataSetIndex int,@TempDataset nvarchar(max),@InnerWhereClause nvarchar(max),@EvaluationDataSet nvarchar(max)
-			,@isDuplicateInd int=0,@DatasetColumn nvarchar(max)=null,@outerSelectPivot nvarchar(max)=''
+			,@isDuplicateInd int=0,@DatasetColumn nvarchar(max)=null,@outerSelectPivot nvarchar(max)='',@SolutionID nvarchar(7)=''
 
 	SET @LogMessage = 'Starting USP_GM_EvaluationProcedure on ModelID = '+ISNULL(convert(varchar(5),@ModelID),'NULL')
 	EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_MainProcedure', 
@@ -35,6 +35,7 @@ BEGIN TRY
 	FROM #ATM_GM_ModelingParameters
 	WHERE ModelID = @ModelID
 		AND ParameterId=2
+	
 	
 	--Get evaluation parameters into a temp table
 	IF OBJECT_ID('tempdb..#ATM_GM_TempEvaluationParams') IS NOT NULL
@@ -81,12 +82,13 @@ BEGIN TRY
 		set @isDuplicateInd =1 
 	END
 
-	select *  FROM #ATM_GM_PreparedData
+	SELECT top 1 @SolutionID = SolutionID
+	FROM #ATM_GM_ModelingParameters
+	WHERE ModelID = @ModelID
+
+	set @EvalQuery ='DECLARE @RunTime datetime = GETUTCDATE()
 	
-	IF OBJECT_ID('tempdb..#ATM_GM_TempEvaluationTable') IS NOT NULL
-		DROP TABLE #ATM_GM_TempEvaluationTable
-	
-	set @EvalQuery ='IF OBJECT_ID(''tempdb..#ATM_GM_TempEvaluationTable'') IS NOT NULL
+					IF OBJECT_ID(''tempdb..#ATM_GM_TempEvaluationTable'') IS NOT NULL
 						DROP TABLE #ATM_GM_TempEvaluationTable
 
 					  --insert evaluations for "ALL" the data
@@ -105,18 +107,33 @@ BEGIN TRY
 
 
 						--SELECT * --into yasha_20140820_evalResults 	from #ATM_GM_TempEvaluationTable --Remove "--" for selecting Result table
-						/*
+						
 						--UNPIVOT the evaluation data
-						select PARTITION_DATASET
-							,cast (substring(evalID,CHARINDEX(''_'',evalID)+1,len(evalID)) as int) as EvaluationID
-							,EvalValue 
+						insert into [dbo].[GM_R_ModelEvaluationResults] (ModelID,SolutionID,RemodelingTimestamp,Dataset,EvaluationMeasureID,Value)' +
+						+' 
+						
+						SELECT '+cast (@ModelID as char(10)) +
+						','+ @SolutionID+
+						',@RunTime
+						,PARTITION_DATASET
+						,cast (substring(evalID,CHARINDEX(''_'',evalID)+1,len(evalID)) as int)
+						,EvalValue
 						from #ATM_GM_TempEvaluationTable
 						unpivot
 						(
 						EvalValue
 						for evalID in ('+@outerSelectPivot+')
 						) T
-						*/
+						
+						--this join is intended to insert existing <EvaluationMeasureID,DataSet> tuples
+						INNER JOIN (select EvaluationMeasureID,Value as DataSet 
+									from [GM_F_ModelEvaluation] A
+									CROSS JOIN (select Value 
+												from [AdvancedBIsystem].[dbo].[UDF_GetStringTableFromList]('''+@EvaluationDataSet+''')) B
+									where CHARINDEX(B.value,a.Datasets)>0 ) DS
+						ON DS.EvaluationMeasureID=cast (substring(evalID,CHARINDEX(''_'',evalID)+1,len(evalID)) as int) AND PARTITION_DATASET=DS.DataSet'
+						
+						+'
 					'
 	exec (@EvalQuery) 
 	
