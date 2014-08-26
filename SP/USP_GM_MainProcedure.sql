@@ -40,7 +40,7 @@ SET @ExecutionMode = 1 -- 0- modeling+indicators / 1- modeling / 2- indicators
 
 DECLARE @MGID int, @MID int, @SID int, @CMD varchar(max),@FailPoint int,@StartTime datetime = GETUTCDATE(),@EndTime datetime
 ,@ErrorMessage varchar(1000),@LogMessage varchar(1000),@ModelGroupLogMessage varchar (1000), @ModelGroupEndTime datetime
-,@ModelGroupStartTime datetime,@ModelGroupName varchar(100),@SolutionName varchar(100)
+,@ModelGroupStartTime datetime,@ModelGroupName varchar(100),@SolutionName varchar(100),@Formula varchar(max)
 
 DECLARE @ModelGroupInfoLog TABLE (
 	Step VARCHAR(100),
@@ -207,7 +207,7 @@ SET @FailPoint = 3
 
 				CREATE TABLE #ATM_GM_PreparedData (Dummy int)--Table created with dummy column that will be altered and dropped in the next query
 
-				SET @FailPoint = 2 -- Creating the PreparedData table
+				SET @FailPoint = 9 -- Creating the PreparedData table
 
 				SELECT @CMD = 'ALTER TABLE #ATM_GM_PreparedData ADD '+Value
 				FROM #ATM_GM_ModelingParameters
@@ -225,7 +225,7 @@ SET @FailPoint = 3
 				--Population Filter
 				------------------------------------------------------------------
 
-				SET @FailPoint = 9 -- Population Filter
+				SET @FailPoint = 10 -- Population Filter
 
 				IF EXISTS(SELECT 1 FROM #ATM_GM_ModelingParameters WHERE ModelGroupID = @MGID AND ParameterID =19 and Value<>'' ) --if there is population filter configured for this model group
 				BEGIN
@@ -263,7 +263,7 @@ SET @FailPoint = 3
 				--Populating Data Preperation table
 				------------------------------------------------------------------
 
-				SET @FailPoint = 10 -- Executing the data preperation SP
+				SET @FailPoint = 11 -- Executing the data preperation SP
 
 				INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 				SELECT 'Modeling DataPreperation-Model '+convert(varchar(5),@MID),GETUTCDATE()
@@ -286,7 +286,7 @@ SET @FailPoint = 3
 				--Executing the model using the prepared data table
 				------------------------------------------------------------------
 	
-				SET @FailPoint = 11 -- executing the model
+				SET @FailPoint = 12 -- executing the model
 
 				INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 				SELECT 'Modeling-Model '+convert(varchar(5),@MID),GETUTCDATE()
@@ -303,6 +303,27 @@ SET @FailPoint = 3
 				SET EndTime = GETUTCDATE()
 				WHERE Step = 'Modeling-Model '+convert(varchar(5),@MID)
 
+				IF ((select count(*) from [dbo].[GM_F_ModelEvaluation] where ModelID = @MID) > 0) BEGIN
+					
+					SET @FailPoint = 13 -- Executing the data preperation SP
+
+					INSERT INTO @ModelGroupInfoLog(Step,StartTime)
+					SELECT 'Evaluating-Model '+convert(varchar(5),@MID),GETUTCDATE()
+
+					
+					--insert modeling formula as a checkfunction			
+					select @Formula = [dbo].[UDF_GM_GetFormulaString](@MID,@SolutionID)
+					print(@Formula)
+					--Adding a formula column to #PreparedData 
+					SELECT @CMD = 'ALTER TABLE #ATM_GM_PreparedData ADD [PREDICTION] as ' +@Formula + ' '
+					EXEC(@CMD)
+					EXEC [dbo].[USP_GM_EvaluationProcedure] @ModelID=@MID
+
+					UPDATE @ModelGroupInfoLog
+					SET EndTime = GETUTCDATE()
+					WHERE Step = 'Evaluating-Model '+convert(varchar(5),@MID)
+			
+				END
 				
 			END
 			--------------
@@ -318,7 +339,7 @@ SET @FailPoint = 3
 
 				CREATE TABLE #ATM_GM_Indicators_PreparedData (Dummy int)--Table created with dummy column that will be altered and dropped in the next query
 
-				SET @FailPoint = 12 -- Creating the PreparedData table
+				SET @FailPoint = 14 -- Creating the PreparedData table
 
 				SELECT @CMD = 'ALTER TABLE #ATM_GM_Indicators_PreparedData ADD '+Value
 				FROM #ATM_GM_ModelingParameters
@@ -336,7 +357,7 @@ SET @FailPoint = 3
 				--Populating Indicators prepared data table
 				------------------------------------------------------------------
 
-				SET @FailPoint = 13 -- Executing the indicators data preperation SP
+				SET @FailPoint = 15 -- Executing the indicators data preperation SP
 
 				INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 				SELECT 'Indicators DataPreperation-Model '+convert(varchar(5),@MID),GETUTCDATE()
@@ -360,7 +381,7 @@ SET @FailPoint = 3
 			SET @MID = NULL
 		END -- End of model loop
 
-		SET @FailPoint = 14
+		SET @FailPoint = 16
 
 		IF OBJECT_ID('tempdb..#ATM_GM_RawDataCopy') IS NOT NULL-- if we used this table for the population filter
 		DROP TABLE #ATM_GM_RawDataCopy
