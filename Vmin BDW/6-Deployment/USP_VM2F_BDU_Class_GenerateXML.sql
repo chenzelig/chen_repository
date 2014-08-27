@@ -35,7 +35,7 @@ BEGIN
 	
 	Method:
 	--------
-	calculate DFF:
+	Calculate DFF:
 		the SP calculates the "importance level" for each product and the final value
 		for the DFF is determined according to the highest ranked product
 

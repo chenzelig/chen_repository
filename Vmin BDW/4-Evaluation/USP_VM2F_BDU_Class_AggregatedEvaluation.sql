@@ -1,8 +1,8 @@
 USE MPDExploration
 GO
 
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_VM2F_BDU_AggregatedEvaluation]') AND type in (N'P', N'PC'))
-	DROP PROCEDURE [dbo].[USP_VM2F_BDU_AggregatedEvaluation]
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_VM2F_BDU_Class_AggregatedEvaluation]') AND type in (N'P', N'PC'))
+	DROP PROCEDURE [dbo].[USP_VM2F_BDU_Class_AggregatedEvaluation]
 
 GO
 
@@ -13,7 +13,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 
-CREATE PROCEDURE [dbo].[USP_VM2F_BDU_AggregatedEvaluation]
+CREATE PROCEDURE [dbo].[USP_VM2F_BDU_Class_AggregatedEvaluation]
 	 @groupTable  NVARCHAR(1000)
 	,@FlatTable NVARCHAR(1000)
 	,@TargetTable NVARCHAR(1000) 
