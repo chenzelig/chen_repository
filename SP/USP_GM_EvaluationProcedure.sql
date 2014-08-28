@@ -128,7 +128,7 @@ BEGIN TRY
 						--this join is intended to insert existing <EvaluationMeasureID,DataSet> tuples
 						INNER JOIN (select EvaluationMeasureID,Value as DataSet 
 									from [GM_F_ModelEvaluation] A
-									CROSS JOIN (select Value 
+									CROSS JOIN (select distinct Value 
 												from [AdvancedBIsystem].[dbo].[UDF_GetStringTableFromList]('''+@EvaluationDataSet+''')) B
 									where CHARINDEX(B.value,a.Datasets)>0 ) DS
 						ON DS.EvaluationMeasureID=cast (substring(evalID,CHARINDEX(''_'',evalID)+1,len(evalID)) as int) AND PARTITION_DATASET=DS.DataSet'
@@ -145,9 +145,9 @@ END TRY
 
 BEGIN CATCH
 	SET @ErrorMessage = ERROR_MESSAGE()
-	EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GFA_FE_GetProductNameFromMGID', @EngineName = 'MFG_Solutions', 
+	EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_GM_EvaluationProcedure', @EngineName = 'MFG_Solutions', 
 							@ModuleName = 'GFA-UI', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
-	RAISERROR (N'USP_GFA_FE_GetProductNameFromMGID:: ERR-%s', 16,1, @ErrorMessage)
+	RAISERROR (N'USP_GM_EvaluationProcedure:: ERR-%s', 16,1, @ErrorMessage)
 END CATCH
 
 

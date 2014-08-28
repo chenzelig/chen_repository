@@ -5,7 +5,7 @@ CREATE TABLE [dbo].[GM_R_IndicatorLevelInstances](
 	[ModelID] [int] NOT NULL,
 	[IndicatorLevelID] [int] NOT NULL,
 	[IndicatorLevelInstanceID] [int] NOT NULL,
-	[ComponentValues] [float] NOT NULL,
+	[ComponentValues] varchar(900) NOT NULL,
  CONSTRAINT [PK_GM_R_IndicatorLevelInstances] PRIMARY KEY CLUSTERED 
 (
 	[ModelID] ASC,
@@ -23,5 +23,5 @@ GO
 ALTER TABLE [dbo].[GM_R_IndicatorLevelInstances] CHECK CONSTRAINT [FK_GM_R_IndicatorLevelInstances_ModelID]
 GO
 
-
-
+CREATE NONCLUSTERED INDEX IDX_GM_R_IndicatorLevelInstances_ComponentValues
+ON GM_R_IndicatorLevelInstances (ComponentValues)

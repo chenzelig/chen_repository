@@ -324,6 +324,10 @@ SET @FailPoint = 3
 					WHERE Step = 'Evaluating-Model '+convert(varchar(5),@MID)
 			
 				END
+
+			--INDICATORS!!!!
+			exec [dbo].[USP_GM_IndicatorProcedure] @ModelID =@MID
+			--INDICATORS!!!!
 				
 			END
 			--------------
