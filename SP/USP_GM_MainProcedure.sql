@@ -139,7 +139,29 @@ SET @FailPoint = 3
 
 			CREATE TABLE #ATM_GM_RawData (Dummy int) --Table created with dummy column that will be altered and dropped inside the data extraction module	
 
-			SET @FailPoint = 5
+			---
+			IF EXISTS (select top 1 1 from #ATM_GM_ModelingParameters where ModelID = @MID and ParameterId=24)
+			BEGIN
+				SET @FailPoint = 5
+
+				INSERT INTO @ModelGroupInfoLog(Step,StartTime)
+				SELECT 'Modeling DataExtraction Pre-Step-Model Group '+convert(varchar(5),@MGID),GETUTCDATE()
+
+				SELECT @CMD = Value
+				FROM #ATM_GM_ModelingParameters
+				WHERE ModelID = @MID
+					AND ParameterId=3 -- Parameter 3 is the data preparation SP
+
+				PRINT(@CMD)
+				EXEC(@CMD)
+
+				UPDATE @ModelGroupInfoLog
+				SET EndTime = GETUTCDATE()
+				WHERE Step='Modeling DataExtraction Pre-Step-Model Group '+convert(varchar(5),@MGID)
+			END
+			---
+			
+			SET @FailPoint = 6
 
 			INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 			SELECT 'Modeling DataExtraction-Model Group '+convert(varchar(5),@MGID),GETUTCDATE()
@@ -160,7 +182,7 @@ SET @FailPoint = 3
 
 			CREATE TABLE #ATM_GM_Indicators_RawData (Dummy int) --Table created with dummy column that will be altered and dropped inside the data extraction module	
 
-			SET @FailPoint = 6
+			SET @FailPoint = 7
 
 			INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 			SELECT 'Indicators DataExtraction-Model Group '+convert(varchar(5),@MGID),GETUTCDATE()
@@ -174,7 +196,7 @@ SET @FailPoint = 3
 		---------------------------------------------------------------------------------------
 		--Creating a table that holds all the model id's in the framework for current solution and model group
 		---------------------------------------------------------------------------------------
-		SET @FailPoint = 7
+		SET @FailPoint = 8
 
 		IF OBJECT_ID('tempdb..#ATM_GM_Models') IS NOT NULL
 			DROP TABLE #ATM_GM_Models
@@ -200,14 +222,14 @@ SET @FailPoint = 3
 				------------------------------------------------------------------
 				--Generic Table for holding prepared data for each model
 				------------------------------------------------------------------
-				SET @FailPoint = 8
+				SET @FailPoint = 9
 
 				IF OBJECT_ID('tempdb..#ATM_GM_PreparedData') IS NOT NULL
 					DROP TABLE #ATM_GM_PreparedData
 
 				CREATE TABLE #ATM_GM_PreparedData (Dummy int)--Table created with dummy column that will be altered and dropped in the next query
 
-				SET @FailPoint = 9 -- Creating the PreparedData table
+				SET @FailPoint = 10 -- Creating the PreparedData table
 
 				SELECT @CMD = 'ALTER TABLE #ATM_GM_PreparedData ADD '+Value
 				FROM #ATM_GM_ModelingParameters
@@ -225,7 +247,7 @@ SET @FailPoint = 3
 				--Population Filter
 				------------------------------------------------------------------
 
-				SET @FailPoint = 10 -- Population Filter
+				SET @FailPoint = 11 -- Population Filter
 
 				IF EXISTS(SELECT 1 FROM #ATM_GM_ModelingParameters WHERE ModelGroupID = @MGID AND ParameterID =19 and Value<>'' ) --if there is population filter configured for this model group
 				BEGIN
@@ -263,7 +285,7 @@ SET @FailPoint = 3
 				--Populating Data Preperation table
 				------------------------------------------------------------------
 
-				SET @FailPoint = 11 -- Executing the data preperation SP
+				SET @FailPoint = 12 -- Executing the data preperation SP
 
 				INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 				SELECT 'Modeling DataPreperation-Model '+convert(varchar(5),@MID),GETUTCDATE()
@@ -286,7 +308,7 @@ SET @FailPoint = 3
 				--Executing the model using the prepared data table
 				------------------------------------------------------------------
 	
-				SET @FailPoint = 12 -- executing the model
+				SET @FailPoint = 13 -- executing the model
 
 				INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 				SELECT 'Modeling-Model '+convert(varchar(5),@MID),GETUTCDATE()
@@ -305,7 +327,7 @@ SET @FailPoint = 3
 
 				IF ((select count(*) from [dbo].[GM_F_ModelEvaluation] where ModelID = @MID) > 0) BEGIN
 					
-					SET @FailPoint = 13 -- Executing the data preperation SP
+					SET @FailPoint = 14 -- Executing the data preperation SP
 
 					INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 					SELECT 'Evaluating-Model '+convert(varchar(5),@MID),GETUTCDATE()
@@ -325,9 +347,6 @@ SET @FailPoint = 3
 			
 				END
 
-			--INDICATORS!!!!
-			exec [dbo].[USP_GM_IndicatorProcedure] @ModelID =@MID
-			--INDICATORS!!!!
 				
 			END
 			--------------
@@ -343,7 +362,7 @@ SET @FailPoint = 3
 
 				CREATE TABLE #ATM_GM_Indicators_PreparedData (Dummy int)--Table created with dummy column that will be altered and dropped in the next query
 
-				SET @FailPoint = 14 -- Creating the PreparedData table
+				SET @FailPoint = 15 -- Creating the PreparedData table
 
 				SELECT @CMD = 'ALTER TABLE #ATM_GM_Indicators_PreparedData ADD '+Value
 				FROM #ATM_GM_ModelingParameters
@@ -361,7 +380,7 @@ SET @FailPoint = 3
 				--Populating Indicators prepared data table
 				------------------------------------------------------------------
 
-				SET @FailPoint = 15 -- Executing the indicators data preperation SP
+				SET @FailPoint = 16 -- Executing the indicators data preperation SP
 
 				INSERT INTO @ModelGroupInfoLog(Step,StartTime)
 				SELECT 'Indicators DataPreperation-Model '+convert(varchar(5),@MID),GETUTCDATE()
@@ -379,13 +398,25 @@ SET @FailPoint = 3
 				WHERE Step = 'Indicators DataPreperation-Model '+convert(varchar(5),@MID)
 			END
 
+			if exists (select top 1 1 from GM_F_ModelIndicators (nolock) where ModelID=@MID)
+			BEGIN
+				SET @FailPoint = 17
+				INSERT INTO @ModelGroupInfoLog(Step,StartTime)
+				SELECT 'Indicators Calculation-Model '+convert(varchar(5),@MID),GETUTCDATE()
+				
+				exec [dbo].[USP_GM_IndicatorProcedure] @ModelID =@MID
+
+					UPDATE @ModelGroupInfoLog
+				SET EndTime = GETUTCDATE()
+				WHERE Step = 'Indicators Calculation-Model '+convert(varchar(5),@MID)
+			END
 			DELETE FROM #ATM_GM_Models
 			WHERE ModelID = @MID
 
 			SET @MID = NULL
 		END -- End of model loop
 
-		SET @FailPoint = 16
+		SET @FailPoint = 18
 
 		IF OBJECT_ID('tempdb..#ATM_GM_RawDataCopy') IS NOT NULL-- if we used this table for the population filter
 		DROP TABLE #ATM_GM_RawDataCopy
