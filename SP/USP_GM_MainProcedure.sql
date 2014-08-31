@@ -146,7 +146,7 @@ SET @FailPoint = 3
 
 				SELECT @CMD = Value
 				FROM #ATM_GM_ModelingParameters
-				WHERE ModelID = @MID
+				WHERE ModelGroupID = @MGID
 					AND ParameterId=24 -- Parameter 24 is the data extraction prestep
 					
 				PRINT(@CMD)
@@ -189,7 +189,7 @@ SET @FailPoint = 3
 
 				SELECT @CMD = Value
 				FROM #ATM_GM_ModelingParameters
-				WHERE ModelID = @MID
+				WHERE ModelGroupID = @MGID
 					AND ParameterId=25 -- Parameter 24 is the indicators data extraction prestep
 					
 				PRINT(@CMD)
