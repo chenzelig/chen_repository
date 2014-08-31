@@ -26,14 +26,11 @@ GO
 
 CREATE PROCEDURE USP_GM_MainProcedure
 
-@SolutionID int=NULL,@ModelGroupID int = NULL, @ModelID int =NULL
+@SolutionID int=NULL,@ModelGroupID int = NULL, @ModelID int =NULL, @ExecutionMode int=0 -- 0- modeling+indicators / 1- modeling / 2- indicators
 
 AS
 
 BEGIN TRY
-
-DECLARE @ExecutionMode int --to be moved to procedure parameters
-SET @ExecutionMode = 1 -- 0- modeling+indicators / 1- modeling / 2- indicators
 ----------------------------------------------------
 ---------------DECLARE VARIABLES--------------------
 ----------------------------------------------------
@@ -140,7 +137,7 @@ SET @FailPoint = 3
 			CREATE TABLE #ATM_GM_RawData (Dummy int) --Table created with dummy column that will be altered and dropped inside the data extraction module	
 
 			---
-			IF EXISTS (select top 1 1 from #ATM_GM_ModelingParameters where ModelID = @MID and ParameterId=24)
+			IF EXISTS (select top 1 1 from #ATM_GM_ModelingParameters where ModelGroupID = @MGID and ParameterId=24)
 			BEGIN
 				SET @FailPoint = 5
 
@@ -150,8 +147,8 @@ SET @FailPoint = 3
 				SELECT @CMD = Value
 				FROM #ATM_GM_ModelingParameters
 				WHERE ModelID = @MID
-					AND ParameterId=3 -- Parameter 3 is the data preparation SP
-
+					AND ParameterId=24 -- Parameter 24 is the data extraction prestep
+					
 				PRINT(@CMD)
 				EXEC(@CMD)
 
@@ -175,12 +172,34 @@ SET @FailPoint = 3
 		------------------------------------------------------------------
 		--Generic Table for holding indicators raw data for each model group
 		------------------------------------------------------------------
-		IF @ExecutionMode IN(0,2) AND EXISTS (select top 1 1 from #ATM_GM_ModelingParameters where ModelID = @MID and ParameterId=21)
+		IF @ExecutionMode IN(0,2) AND EXISTS (select top 1 1 from #ATM_GM_ModelingParameters where ModelGroupID = @MGID and ParameterId=21)
 		BEGIN
 			IF OBJECT_ID('tempdb..#ATM_GM_Indicators_RawData') IS NOT NULL
 				DROP TABLE #ATM_GM_Indicators_RawData
 
 			CREATE TABLE #ATM_GM_Indicators_RawData (Dummy int) --Table created with dummy column that will be altered and dropped inside the data extraction module	
+
+						---
+			IF EXISTS (select top 1 1 from #ATM_GM_ModelingParameters where ModelGroupID = @MGID and ParameterId=25)
+			BEGIN
+				SET @FailPoint = 601
+
+				INSERT INTO @ModelGroupInfoLog(Step,StartTime)
+				SELECT 'Modeling DataExtraction Pre-Step-Model Group '+convert(varchar(5),@MGID),GETUTCDATE()
+
+				SELECT @CMD = Value
+				FROM #ATM_GM_ModelingParameters
+				WHERE ModelID = @MID
+					AND ParameterId=25 -- Parameter 24 is the indicators data extraction prestep
+					
+				PRINT(@CMD)
+				EXEC(@CMD)
+
+				UPDATE @ModelGroupInfoLog
+				SET EndTime = GETUTCDATE()
+				WHERE Step='Modeling DataExtraction Pre-Step-Model Group '+convert(varchar(5),@MGID)
+			END
+			---
 
 			SET @FailPoint = 7
 

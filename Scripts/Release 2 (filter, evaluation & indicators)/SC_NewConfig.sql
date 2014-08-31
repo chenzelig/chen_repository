@@ -4,8 +4,6 @@ GO
 /********************Back Out plan***********************************/
 delete [GM_D_Parameters] where ParameterID in (19,20,21,22,23)
 
-
-
 UPDATE A
 SET ConnectionAttributes = 'SourceType,Driver'
 FROM [dbo].[GM_D_DE_ConnectionTypes] A
@@ -33,6 +31,10 @@ INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,	ParameterDesc, ParameterLevelI
 							VALUES	(	22,			'Indicators - Prepared Data Schema',		3,			''		)
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,	ParameterDesc, ParameterLevelID,DefaultValue)
 							VALUES	(	23,			'Indicators - Data preparation Stored Procedure',		3,			''		)
+INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,	ParameterDesc, ParameterLevelID,DefaultValue)
+							VALUES	(	24,			'Modeling - DataExtraction Pre-Step',		2,			''		)
+INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,	ParameterDesc, ParameterLevelID,DefaultValue)
+							VALUES	(	25,			'Indicators - DataExtraction Pre-Step',		2,			''		)
 
 
 
