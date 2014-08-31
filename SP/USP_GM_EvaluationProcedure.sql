@@ -41,35 +41,61 @@ BEGIN TRY
 	IF OBJECT_ID('tempdb..#ATM_GM_TempEvaluationParams') IS NOT NULL
 	DROP TABLE #ATM_GM_TempEvaluationParams
 
-	SELECT row_number() over (order by A.EvaluationMeasureID,B.EvaluationCalculatedFieldID) as ROW_NUM
-		,EvaluationMeasureID
+	
+	
+	--insert EvaluationMeasure's that do not have calculatedFieldId's
+	--insert into #ATM_GM_TempEvaluationParams
+	SELECT distinct EvaluationMeasureID
+		,EvaluationMeasureName
+		,EvaluationDefinition
+		,cast (NULL as int) as EvaluationCalculatedFieldID
+		,cast (NULL as varchar(max)) as EvaluationCalculatedFieldLogic
+		,cast (NULL as varchar(max)) as EvaluationCalculatedFieldName
+	into #ATM_GM_TempEvaluationParams
+	FROM [dbo].[GM_D_EvaluationMeasures] (NOLOCK) A
+	where EvaluationMeasureID in (select EvaluationMeasureID from [dbo].[GM_F_ModelEvaluation] where ModelID = @ModelID)
+		  and EvaluationCalculatedFieldIDs IS NULL
+
+	--insert EvaluationMeasure's that have calculatedFieldId's
+	insert into #ATM_GM_TempEvaluationParams
+	SELECT EvaluationMeasureID
 		,EvaluationMeasureName
 		,EvaluationDefinition
 		,EvaluationCalculatedFieldID
 		,EvaluationCalculatedFieldLogic
 		,EvaluationCalculatedFieldName
-	into #ATM_GM_TempEvaluationParams
-	FROM [dbo].[GM_D_EvaluationMeasures] A
-	CROSS JOIN [dbo].[GM_D_EvaluationCalculatedFields] B
+
+	FROM [dbo].[GM_D_EvaluationMeasures] (NOLOCK) A
+	CROSS JOIN [dbo].[GM_D_EvaluationCalculatedFields] (NOLOCK) B
 	where B.EvaluationCalculatedFieldID in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](EvaluationCalculatedFieldIDs))
-		and EvaluationMeasureID in (select EvaluationMeasureID from [dbo].[GM_F_ModelEvaluation] where ModelID = @ModelID)
-	
-	--select * from #ATM_GM_TempEvaluationParams --for debug
+		and EvaluationMeasureID in (select EvaluationMeasureID from [dbo].[GM_F_ModelEvaluation] (NOLOCK)  where ModelID = @ModelID)
+
+	---select * from #ATM_GM_TempEvaluationParams --for debug
 
 	SET @EvalQuery = ''
 	SET @outerSelect =''
 	SET @innerSelect =''
 	SET @EvaluationDataSet =''
 
-	SELECT @outerSelect = @outerSelect + ' CAST (' + EvaluationDefinition  + ' as float) AS EVALUATION_'+cast (EvaluationMeasureID as varchar(6))+ ' ,' FROM  (select distinct EvaluationMeasureID, EvaluationDefinition from #ATM_GM_TempEvaluationParams) T 
+	SELECT @outerSelect = @outerSelect + ' CAST (' + EvaluationDefinition  + ' as float) AS EVALUATION_'+cast (EvaluationMeasureID as varchar(6))+ ' ,' 
+	FROM  (select distinct EvaluationMeasureID, EvaluationDefinition 
+			from #ATM_GM_TempEvaluationParams) T 
 	SET @outerSelect = substring(@outerSelect,1,len(@outerSelect)-1)
-	SELECT @outerSelectPivot = @outerSelectPivot + 'EVALUATION_'+cast (EvaluationMeasureID as varchar(6))+ ' ,' FROM  (select distinct EvaluationMeasureID, EvaluationDefinition from #ATM_GM_TempEvaluationParams) T 
-	SET @outerSelectPivot = substring(@outerSelectPivot,1,len(@outerSelectPivot)-1)	
-	SELECT @innerSelect = @innerSelect + ' ' + REPLACE(EvaluationCalculatedFieldLogic,'[TARGET]',@TargetAttribute) + ' AS ' + EvaluationCalculatedFieldName +',' FROM  (select distinct EvaluationCalculatedFieldLogic, EvaluationCalculatedFieldName from #ATM_GM_TempEvaluationParams) T 
-	SET @innerSelect = substring(@innerSelect,1,len(@innerSelect)-1)
+	SET @outerSelect = REPLACE(@outerSelect,'[TARGET]',@TargetAttribute)
 	
+	SELECT @outerSelectPivot = @outerSelectPivot + 'EVALUATION_'+cast (EvaluationMeasureID as varchar(6))+ ' ,' 
+	FROM  (select distinct EvaluationMeasureID, EvaluationDefinition 
+			from #ATM_GM_TempEvaluationParams) T 
+	SET @outerSelectPivot = substring(@outerSelectPivot,1,len(@outerSelectPivot)-1)	
+	SELECT @innerSelect = @innerSelect + case when EvaluationCalculatedFieldLogic is not null then ' ' + REPLACE(EvaluationCalculatedFieldLogic,'[TARGET]',@TargetAttribute) + ' AS ' + EvaluationCalculatedFieldName +',' else '' end
+	FROM  (select distinct EvaluationCalculatedFieldLogic, EvaluationCalculatedFieldName 
+			from #ATM_GM_TempEvaluationParams) T 
+	SET @innerSelect = substring(@innerSelect,1,len(@innerSelect)-1)
+
 	--checking if data is partitioned into other then 'ALL'/NULL partitions
-	select  @EvaluationDataSet = @EvaluationDataSet + ',' + datasets 	FROM (select distinct datasets from [dbo].[GM_F_ModelEvaluation] where ModelID = @ModelID) T
+	select  @EvaluationDataSet = @EvaluationDataSet + ',' + datasets 	
+	FROM (select distinct datasets 
+		  from [dbo].[GM_F_ModelEvaluation] (NOLOCK) where ModelID = @ModelID) T
 	SET @EvaluationDataSet = substring(@EvaluationDataSet,2,len(@EvaluationDataSet))
 
 	SELECT @DatasetColumn = Value
@@ -92,23 +118,27 @@ BEGIN TRY
 						DROP TABLE #ATM_GM_TempEvaluationTable
 
 					  --insert evaluations for "ALL" the data
+					  
 					  SELECT cast(PARTITION_DATASET as varchar(240)) AS PARTITION_DATASET,' + @outerSelect + 
-					' INTO #ATM_GM_TempEvaluationTable 
+					' 
+					  INTO #ATM_GM_TempEvaluationTable 
 					  FROM (SELECT  ''ALL''   AS PARTITION_DATASET, [PREDICTION],' + @TargetAttribute +' , ' + @innerSelect+ ' 
 							FROM #ATM_GM_PreparedData ) A
 					  GROUP BY PARTITION_DATASET
-
+					  
 					  --insert evaluations for "ALL" the data
+					  
 					  INSERT INTO  #ATM_GM_TempEvaluationTable  
 					  SELECT PARTITION_DATASET,' + @outerSelect + ' 
 					  FROM (SELECT '+coalesce(@DatasetColumn,'''ALL''') +'  AS PARTITION_DATASET, [PREDICTION],' + @TargetAttribute +' , ' + @innerSelect+ ' 
 							FROM #ATM_GM_PreparedData ) A 
 					   GROUP BY PARTITION_DATASET
 
-
-						--SELECT * --into yasha_20140820_evalResults 	from #ATM_GM_TempEvaluationTable --Remove "--" for selecting Result table
+					   
+						--SELECT * 	into yasha_20140831_evalResults from #ATM_GM_TempEvaluationTable --Remove "--" for selecting Result table
 						
 						--UNPIVOT the evaluation data
+						
 						insert into [dbo].[GM_R_ModelEvaluationResults] (ModelID,SolutionID,RemodelingTimestamp,Dataset,EvaluationMeasureID,Value)' +
 						+' 
 						
@@ -127,16 +157,18 @@ BEGIN TRY
 						
 						--this join is intended to insert existing <EvaluationMeasureID,DataSet> tuples
 						INNER JOIN (select EvaluationMeasureID,Value as DataSet 
-									from [GM_F_ModelEvaluation] A
+									from [GM_F_ModelEvaluation] (NOLOCK) A
 									CROSS JOIN (select distinct Value 
 												from [AdvancedBIsystem].[dbo].[UDF_GetStringTableFromList]('''+@EvaluationDataSet+''')) B
 									where CHARINDEX(B.value,a.Datasets)>0 ) DS
-						ON DS.EvaluationMeasureID=cast (substring(evalID,CHARINDEX(''_'',evalID)+1,len(evalID)) as int) AND PARTITION_DATASET=DS.DataSet'
+						ON DS.EvaluationMeasureID=cast (substring(evalID,CHARINDEX(''_'',evalID)+1,len(evalID)) as int) AND PARTITION_DATASET=DS.DataSet 
+						
+						'
 						
 						+'
 					'
-	exec (@EvalQuery) 
-	
+	print (@EvalQuery) 
+	exec (@EvalQuery)
 
 END TRY
 
