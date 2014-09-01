@@ -124,11 +124,11 @@ BEGIN TRY
 			select @currIndicatorLvlId = IndicatorLevelID from #ATM_GM_TempIndicatorList where row_num=@i
 			
 			--select @indicatorLvlSctStr = @indicatorLvlSctStr + cast (case when CharInd=1 then '''''''''+' +IndicatorComponent + '+''''''''+' else ' CAST (' + IndicatorComponent + ' as varchar(max))+' end as varchar(max)) + ''',''+'
-			select @indicatorLvlSctStr = @indicatorLvlSctStr + cast (' CAST (' + IndicatorComponent + ' as varchar(max))+' as varchar(max)) + ''',''+'
+			select @indicatorLvlSctStr = @indicatorLvlSctStr + cast (' CAST (' + isnull(IndicatorComponent,'''''') + ' as varchar(max))+' as varchar(max)) + ''',''+'
 			from #ATM_GM_TempIndicatorComponentList
 			where  IndicatorLevelID in (@currIndicatorLvlId) 
 			order by IndicatorComponentID
-			
+
 			SET @indicatorLvlSctStr = substring(@indicatorLvlSctStr,1,len(@indicatorLvlSctStr)-5)
 			
 			update #ATM_GM_TempIndicatorList set indicatorLvlSctStr=@indicatorLvlSctStr where row_num=@i

@@ -8,7 +8,7 @@ CREATE TABLE [dbo].[GM_R_ModelIndicatorValues](
 	[IndicatorLevelInstanceID] [int] NOT NULL,
 	[IndicatorID] [int] NOT NULL,
 	[Timestamp] [datetime] NOT NULL,
-	[Value] [float] NOT NULL,
+	[Value] [float] ,
  CONSTRAINT [PK_GM_R_ModelIndicatorValues] PRIMARY KEY CLUSTERED 
 (
 	[ModelID] ASC,
