@@ -143,5 +143,4 @@ ON M.SolutionID=MP.SolutionID
 -- return all configurations
 ------------------------------
 SELECT * FROM #GM_ModelingParameters
-
-
+where Value is not null

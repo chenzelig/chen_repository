@@ -31,9 +31,24 @@ AS
 
 DECLARE @SolutionID int, @ModelGroupID int
 
+
+SELECT @SolutionID=SolutionID
+FROM [dbo].[GM_D_Models]
+WHERE ModelID=@ModelID
+
+SELECT @ModelGroupID=ModelGroupID
+FROM [dbo].[GM_D_Models]
+WHERE ModelID=@ModelID
+
 IF EXISTS (SELECT 1 FROM [dbo].[GM_F_ModelingParameters]
 				WHERE ModelID=@ModelID AND ParameterID=19)
 BEGIN
+	IF @PopulationFilter is NULL
+	BEGIN
+		DELETE FROM [dbo].[GM_F_ModelingParameters]
+		WHERE ModelID= @ModelID and ParameterID = 19
+	END
+
 	IF @ReplaceCurrentFilter=0
 	BEGIN
 		UPDATE A
@@ -53,14 +68,6 @@ END
 
 ELSE
 BEGIN
-
-	SELECT @SolutionID=SolutionID
-	FROM [dbo].[GM_D_Models]
-	WHERE ModelID=@ModelID
-
-	SELECT @ModelGroupID=ModelGroupID
-	FROM [dbo].[GM_D_Models]
-	WHERE ModelID=@ModelID
 
 	INSERT INTO [dbo].[GM_F_ModelingParameters]( SolutionID, ModelGroupID, ModelID,ParameterID,		Value	)
 										VALUES (@SolutionID,@ModelGroupID,@ModelID,		19	,	@PopulationFilter)

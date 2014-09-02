@@ -268,12 +268,12 @@ SET @FailPoint = 3
 
 				SET @FailPoint = 11 -- Population Filter
 
-				IF EXISTS(SELECT 1 FROM #ATM_GM_ModelingParameters WHERE ModelGroupID = @MGID AND ParameterID =19 and Value<>'' ) --if there is population filter configured for this model group
+				IF EXISTS(SELECT 1 FROM #ATM_GM_ModelingParameters WHERE ModelGroupID = @MGID AND ParameterID =19) --if there is population filter configured for this model group
 				BEGIN
 					--keeping #ATM_GM_RawData data for next runs in this loop
 					IF OBJECT_ID('tempdb..#ATM_GM_RawDataCopy') IS NULL --if table does not exist
 					BEGIN
-						SELECT 'CopyingData to RawDataCopy'
+						--SELECT 'CopyingData to RawDataCopy'
 						SELECT * INTO #ATM_GM_RawDataCopy
 						FROM #ATM_GM_RawData
 					
@@ -281,13 +281,13 @@ SET @FailPoint = 3
 								
 					ELSE --#ATM_GM_RawDataCopy was already populated
 					BEGIN
-						Print 'CopyingData from RawDataCopy to RawData'
+						--Print 'CopyingData from RawDataCopy to RawData'
 						TRUNCATE Table #ATM_GM_RawData
 						INSERT INTO #ATM_GM_RawData
 						SELECT * FROM #ATM_GM_RawDataCopy
 					END
 
-					IF EXISTS(SELECT 1 FROM #ATM_GM_ModelingParameters WHERE ModelID = @MID AND ParameterID =19 and Value<>'' )
+					IF EXISTS(SELECT 1 FROM #ATM_GM_ModelingParameters WHERE ModelID = @MID AND ParameterID =19)
 					BEGIN
 					
 						SELECT @CMD = 'DELETE FROM #ATM_GM_RawData WHERE '+REPLACE(Value,'','''')
