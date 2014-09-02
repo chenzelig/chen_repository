@@ -6,13 +6,13 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_GM_AddPopulationFilter]') AND type in (N'P', N'PC'))
-DROP PROCEDURE [dbo].[USP_GM_AddPopulationFilter]
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_GM_AddDeleteStatement]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [dbo].[USP_GM_AddDeleteStatement]
 
 GO
 
 /*******************************************************           
-* Procedure:		[USP_GM_AddPopulationFilter]  
+* Procedure:		[USP_GM_AddDeleteStatement]  
 *                                                              
 * Description:		
 * 
@@ -25,7 +25,7 @@ GO
 *******************************************************/ 
 
 
-CREATE PROCEDURE dbo.USP_GM_AddPopulationFilter @ModelID int = NULL, @PopulationFilter VARCHAR(max)=NULL, @ReplaceCurrentFilter Bit=0
+CREATE PROCEDURE dbo.USP_GM_AddDeleteStatement @ModelID int = NULL, @DeleteStatement VARCHAR(max), @ReplaceCurrentStatement Bit=0
 
 AS
 
@@ -43,16 +43,16 @@ WHERE ModelID=@ModelID
 IF EXISTS (SELECT 1 FROM [dbo].[GM_F_ModelingParameters]
 				WHERE ModelID=@ModelID AND ParameterID=19)
 BEGIN
-	IF @PopulationFilter is NULL
+	IF @DeleteStatement is NULL
 	BEGIN
 		DELETE FROM [dbo].[GM_F_ModelingParameters]
 		WHERE ModelID= @ModelID and ParameterID = 19
 	END
 
-	IF @ReplaceCurrentFilter=0
+	IF @ReplaceCurrentStatement=0
 	BEGIN
 		UPDATE A
-		SET Value = REPLACE(Value,Value,Value+' AND '+@PopulationFilter)
+		SET Value = REPLACE(Value,Value,Value+' AND '+@DeleteStatement)
 		FROM [dbo].[GM_F_ModelingParameters] A
 		WHERE ModelID=@ModelID AND ParameterID=19
 	END
@@ -60,7 +60,7 @@ BEGIN
 	ELSE
 	BEGIN
 		UPDATE A
-		SET Value = @PopulationFilter
+		SET Value = @DeleteStatement
 		FROM [dbo].[GM_F_ModelingParameters] A
 		WHERE ModelID=@ModelID AND ParameterID=19
 	END	
@@ -70,6 +70,6 @@ ELSE
 BEGIN
 
 	INSERT INTO [dbo].[GM_F_ModelingParameters]( SolutionID, ModelGroupID, ModelID,ParameterID,		Value	)
-										VALUES (@SolutionID,@ModelGroupID,@ModelID,		19	,	@PopulationFilter)
+										VALUES (@SolutionID,@ModelGroupID,@ModelID,		19	,	@DeleteStatement)
 
 END
