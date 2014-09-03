@@ -26,7 +26,7 @@ GO
 
 CREATE PROCEDURE USP_GM_MainProcedure
 
-@SolutionID int=NULL,@ModelGroupID int = NULL, @ModelID int =NULL, @ExecutionMode int=0 -- 0- modeling+indicators / 1- modeling / 2- indicators
+@SolutionID int=NULL,@ModelGroupID int = NULL, @ModelID int =NULL, @ExecutionMode int=1 -- 0- modeling+indicators / 1- modeling / 2- indicators
 
 AS
 

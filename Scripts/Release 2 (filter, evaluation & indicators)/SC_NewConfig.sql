@@ -24,17 +24,17 @@ where ConnectionTypeId=1
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,	ParameterDesc, ParameterLevelID)
 							VALUES	(	19,			'Delete Statement',		3	)
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,	ParameterDesc, ParameterLevelID,DefaultValue)
-							VALUES	(	20,			'Indicators - Queries For Data Extraction via XML',		2,	 ''	)
+							VALUES	(	20,			'Indicators - Queries For Data Extraction via XML',		2,	 NULL	)
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,	ParameterDesc, ParameterLevelID,DefaultValue)
-							VALUES	(	21,			'Indicators - Raw Data Schema',		2,			''		)
+							VALUES	(	21,			'Indicators - Raw Data Schema',		2,			NULL		)
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,	ParameterDesc, ParameterLevelID,DefaultValue)
-							VALUES	(	22,			'Indicators - Prepared Data Schema',		3,			''		)
+							VALUES	(	22,			'Indicators - Prepared Data Schema',		3,			NULL		)
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,	ParameterDesc, ParameterLevelID,DefaultValue)
-							VALUES	(	23,			'Indicators - Data preparation Stored Procedure',		3,			''		)
+							VALUES	(	23,			'Indicators - Data preparation Stored Procedure',		3,			NULL)
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,	ParameterDesc, ParameterLevelID,DefaultValue)
-							VALUES	(	24,			'Modeling - DataExtraction Pre-Step',		2,			''		)
+							VALUES	(	24,			'Modeling - DataExtraction Pre-Step',		2,			NULL)
 INSERT INTO [dbo].[GM_D_Parameters] (ParameterID,	ParameterDesc, ParameterLevelID,DefaultValue)
-							VALUES	(	25,			'Indicators - DataExtraction Pre-Step',		2,			''		)
+							VALUES	(	25,			'Indicators - DataExtraction Pre-Step',		2,			NULL)
 
 
 
