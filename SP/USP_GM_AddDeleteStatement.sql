@@ -69,7 +69,10 @@ END
 ELSE
 BEGIN
 
+if @DeleteStatement is not null
+BEGIN
 	INSERT INTO [dbo].[GM_F_ModelingParameters]( SolutionID, ModelGroupID, ModelID,ParameterID,		Value	)
 										VALUES (@SolutionID,@ModelGroupID,@ModelID,		19	,	@DeleteStatement)
+END
 
 END
