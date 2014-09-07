@@ -34,7 +34,7 @@ BEGIN TRY
 	IF OBJECT_ID('tempdb..#ATM_GM_TempDataTableList') IS NOT NULL
 		DROP TABLE #ATM_GM_TempDataTableList
 	
-	select @dataTablesStr = @dataTablesStr + DataTableIDs  + ',' 
+	select distinct @dataTablesStr = @dataTablesStr + convert(varchar(max),DataTableID)  + ',' 
 			from #ATM_GM_ModelIndicators 
 			where ModelID=@ModelID
 	SET @dataTablesStr = substring(@dataTablesStr,1,len(@dataTablesStr)-1)
@@ -97,7 +97,7 @@ BEGIN TRY
 		INNER JOIN sys.types (nolock) t 
 		ON c.system_type_id = t.system_type_id and t.name <>'sysname'
 		*/
-		where @currDataTableID in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](M.DataTableIDs))
+		where @currDataTableID in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](M.DataTableID))
 			and ModelID=@ModelID
 		
 		IF OBJECT_ID('tempdb..#ATM_GM_TempIndicatorList') IS NOT NULL
@@ -109,7 +109,7 @@ BEGIN TRY
 		(select distinct IndicatorLevelID
 		from #ATM_GM_ModelIndicators
 		where ModelID=@ModelID
-			 and @currDataTableID in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](DataTableIDs))) T
+			 and @currDataTableID in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](DataTableID))) T
 		
 		--create the select separated by commas
 		select @maxRowNumber =  max(row_num) from #ATM_GM_TempIndicatorList
@@ -137,7 +137,7 @@ BEGIN TRY
 			where IndicatorLevelID in (@currIndicatorLvlId)
 			
 			--insert new indicatorLevelInstance values and give them a new ID
-			
+
 			set @Query ='insert into [GM_R_IndicatorLevelInstances] (ModelID,	IndicatorLevelID,	IndicatorLevelInstanceID,	ComponentValues)
 		
 						select '+cast (@ModelID as varchar(10)) +
@@ -153,8 +153,8 @@ BEGIN TRY
 			
 			set @leftJoinClause = @leftJoinClause + '
 							 
-								 left join [GM_R_IndicatorLevelInstances](nolock) T_'+ cast (@currIndicatorLvlId as varchar(10)) + ' (nolock) ' +
-								 'on T_'+cast (@currIndicatorLvlId as varchar(10))+'.ComponentValues=Concatenated_IndicatorLevelID_'+cast (@currIndicatorLvlId as varchar(10)) +' and T_'+cast (@currIndicatorLvlId as varchar(10))+'.IndicatorLevelID='+cast (@currIndicatorLvlId as varchar(10)) +' and T_'+cast (@currIndicatorLvlId as varchar(10))+'.modelid='+ cast (@ModelID as varchar(10)) +
+								 left join [GM_R_IndicatorLevelInstances](nolock) T_'+ cast (@currIndicatorLvlId as varchar(10)) +
+								 ' on T_'+cast (@currIndicatorLvlId as varchar(10))+'.ComponentValues=Concatenated_IndicatorLevelID_'+cast (@currIndicatorLvlId as varchar(10)) +' and T_'+cast (@currIndicatorLvlId as varchar(10))+'.IndicatorLevelID='+cast (@currIndicatorLvlId as varchar(10)) +' and T_'+cast (@currIndicatorLvlId as varchar(10))+'.modelid='+ cast (@ModelID as varchar(10)) +
 								 '
 
 								 '
@@ -171,7 +171,7 @@ BEGIN TRY
 											inner join #ATM_GM_ModelIndicators M
 											on M.indicatorID=I.indicatorID and M.modelID=@ModelID 
 											
-											WHERE  @currDataTableID in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](M.DataTableIDs))) T
+											WHERE  @currDataTableID in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](M.DataTableID))) T
  
 		SET @indicatorSelect = substring(@indicatorSelect,1,len(@indicatorSelect)-1)
 		--select @indicatorSelect
@@ -206,7 +206,7 @@ BEGIN TRY
 								into #tempIndicatorLvlTbl
 								from  #ATM_GM_ModelIndicators I
 								where modelID = '+cast (@ModelID as varchar(10))+'
-									and '+cast (@currDataTableID as varchar(10))+' in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](I.DataTableIDs) )
+									and '+cast (@currDataTableID as varchar(10))+' in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](I.DataTableID) )
 								GROUP BY IndicatorID, indicatorLevelID 
 							
 								declare @i int = 1,@maxRowNumber int,@Query varchar(max),@RunTime datetime = GETUTCDATE()
