@@ -35,7 +35,7 @@ BEGIN TRY
 		DROP TABLE #ATM_GM_TempDataTableList
 	
 	select @dataTablesStr = @dataTablesStr + DataTableIDs  + ',' 
-			from GM_F_ModelIndicators 
+			from #ATM_GM_ModelIndicators 
 			where ModelID=@ModelID
 	SET @dataTablesStr = substring(@dataTablesStr,1,len(@dataTablesStr)-1)
 
@@ -43,7 +43,7 @@ BEGIN TRY
 		,ID
 		,DataTable
 	into #ATM_GM_TempDataTableList
-	from [dbo].[GM_D_DataTables] 
+	from [dbo].[GM_D_DataTables](nolock)
 	where ID in (select value from  [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](@dataTablesStr))
 	group by ID,DataTable
 
@@ -67,7 +67,7 @@ BEGIN TRY
 		FROM (select distinct IndicatorCalculatedFieldIDs 
 			  from [dbo].[GM_D_Indicators] (nolock) 
 			  where IndicatorCalculatedFieldIDs is not null and IndicatorID in (select indicatorid 
-																				from [dbo].[GM_F_ModelIndicators] (nolock) 
+																				from #ATM_GM_ModelIndicators
 																				where ModelID = @ModelID )) T
 		SET @IndicatorCalculatedFieldIDs = substring(@IndicatorCalculatedFieldIDs,2,len(@IndicatorCalculatedFieldIDs))
 		SET @innerSelect = ''
@@ -88,7 +88,7 @@ BEGIN TRY
 			,IL.IndicatorComponentID	
 			--,case when t.name in ('varchar','char','nvarchar','nchar') then 1 else 0 end as CharInd
 		into #ATM_GM_TempIndicatorComponentList	
-		from [dbo].[GM_F_ModelIndicators] (nolock) M
+		from #ATM_GM_ModelIndicators M
 		INNER JOIN [dbo].[GM_D_IndicatorLevels] (nolock) IL
 		ON M.IndicatorLevelID=IL.IndicatorLevelID
 		/*
@@ -107,7 +107,7 @@ BEGIN TRY
 		into #ATM_GM_TempIndicatorList
 		from
 		(select distinct IndicatorLevelID
-		from GM_F_ModelIndicators (nolock)
+		from #ATM_GM_ModelIndicators
 		where ModelID=@ModelID
 			 and @currDataTableID in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](DataTableIDs))) T
 		
@@ -133,7 +133,7 @@ BEGIN TRY
 			
 			update #ATM_GM_TempIndicatorList set indicatorLvlSctStr=@indicatorLvlSctStr where row_num=@i
 			select @maxInstanceId = coalesce(max(IndicatorLevelInstanceID),0) 
-			from [dbo].[GM_R_IndicatorLevelInstances] 
+			from [dbo].[GM_R_IndicatorLevelInstances](nolock)
 			where IndicatorLevelID in (@currIndicatorLvlId)
 			
 			--insert new indicatorLevelInstance values and give them a new ID
@@ -153,7 +153,7 @@ BEGIN TRY
 			
 			set @leftJoinClause = @leftJoinClause + '
 							 
-								 left join [GM_R_IndicatorLevelInstances] T_'+ cast (@currIndicatorLvlId as varchar(10)) + ' (nolock) ' +
+								 left join [GM_R_IndicatorLevelInstances](nolock) T_'+ cast (@currIndicatorLvlId as varchar(10)) + ' (nolock) ' +
 								 'on T_'+cast (@currIndicatorLvlId as varchar(10))+'.ComponentValues=Concatenated_IndicatorLevelID_'+cast (@currIndicatorLvlId as varchar(10)) +' and T_'+cast (@currIndicatorLvlId as varchar(10))+'.IndicatorLevelID='+cast (@currIndicatorLvlId as varchar(10)) +' and T_'+cast (@currIndicatorLvlId as varchar(10))+'.modelid='+ cast (@ModelID as varchar(10)) +
 								 '
 
@@ -167,9 +167,8 @@ BEGIN TRY
 		select @indicatorSelect = @indicatorSelect + StrVal 
 											from 
 											(select distinct I.IndicatorDefinition +' OVER (PARTITION BY T_' + cast (M.IndicatorLevelID as varchar(10))  + '.ComponentValues) AS INDICATOR_RESULT_'+ cast (M.IndicatorID as varchar(10))+'_'++ cast (M.IndicatorLevelID as varchar(10)) +',' as StrVal
-											from GM_D_Indicators I
-
-											inner join GM_F_ModelIndicators (NOLOCK) M
+											from GM_D_Indicators(nolock) I
+											inner join #ATM_GM_ModelIndicators M
 											on M.indicatorID=I.indicatorID and M.modelID=@ModelID 
 											
 											WHERE  @currDataTableID in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](M.DataTableIDs))) T
@@ -205,7 +204,7 @@ BEGIN TRY
 									,IndicatorID
 									,indicatorLevelID 
 								into #tempIndicatorLvlTbl
-								from  [dbo].[GM_F_ModelIndicators] I
+								from  #ATM_GM_ModelIndicators I
 								where modelID = '+cast (@ModelID as varchar(10))+'
 									and '+cast (@currDataTableID as varchar(10))+' in (select Value from [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](I.DataTableIDs) )
 								GROUP BY IndicatorID, indicatorLevelID 
