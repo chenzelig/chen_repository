@@ -1,5 +1,5 @@
 DECLARE  @SOLUTIONID VARCHAR(MAX)='20'
-		,@MODELGROUPID VARCHAR(MAX)='2011'
+		,@MODELGROUPID VARCHAR(MAX)='2000'
 		,@OPERATION VARCHAR(MAX)='6881'
 		,@PRODUCT VARCHAR(MAX)='BDW'
 		,@PRODUCTOPERATION VARCHAR(MAX)='CLASS'
@@ -24,8 +24,14 @@ SELECT
 	   ,XMLTestCaption=''
 
 INTO #Temp 
-FROM [VM2F_BDU_Class_UT_Exp_WW34_Orig_WP_TestData]
-where testName LIKE 'DFF_%'
+FROM(
+	SELECT DISTINCT testName
+	FROM [VM2F_BDU_Class_UT_Exp_WW34B_Orig_WP_TestData]
+	UNION
+	SELECT DISTINCT testName
+	FROM [VM2F_BDU_Class_UX_Exp_WW34B_Orig_WP_TestData]
+)Res1
+WHERE testName LIKE 'DFF_%'
 
 SELECT GM_D_Features='INSERT INTO GM_D_Features VALUES('+FeatureID+','+SolutionID+','''+TestName+''','''+Operation+''','''+SourceTable+''','''+Categorizing_Value+''','''+Distinctive_Value+''','''+XMLTestCaption+''')'
 FROM #Temp

@@ -7,7 +7,7 @@ DECLARE
 
 
 DECLARE @ExecutionMode int --to be moved to procedure parameters
-SET @ExecutionMode = 1 -- 0- modeling+indicators / 1- modeling / 2- indicators
+SET @ExecutionMode = 2 -- 0- modeling+indicators / 1- modeling / 2- indicators
 ----------------------------------------------------
 ---------------DECLARE VARIABLES--------------------
 ----------------------------------------------------
@@ -35,6 +35,10 @@ CREATE TABLE #ATM_GM_ModelingParameters (
 -- Populate the table
 INSERT INTO #ATM_GM_ModelingParameters
 EXEC USP_GM_ModelingParameters
+
+
+
+
 
 -----------------------------------------------------------------------------------------------
 -- Creating a table that holds all the solutions/model groups/models for the current execution
@@ -75,63 +79,55 @@ SET @FailPoint = 3
 		SELECT @MGID= MIN(ModelGroupID)
 		FROM #ATM_GM_ModelGroups
 
-		------------------------------------------------------------------
-		--Generic Table for holding modeling raw data for each model group
-		------------------------------------------------------------------
-			IF OBJECT_ID('tempdb..#ATM_GM_RawData') IS NOT NULL
-				DROP TABLE #ATM_GM_RawData
+		--------------------------------------------------------------------
+		----Generic Table for holding modeling raw data for each model group
+		--------------------------------------------------------------------
+		--	IF OBJECT_ID('tempdb..#ATM_GM_RawData') IS NOT NULL
+		--		DROP TABLE #ATM_GM_RawData
 
-			CREATE TABLE #ATM_GM_RawData (Dummy int) --Table created with dummy column that will be altered and dropped inside the data extraction module	
+		--	CREATE TABLE #ATM_GM_RawData (Dummy int) --Table created with dummy column that will be altered and dropped inside the data extraction module	
 
-			SET @FailPoint = 5
+		--	SET @FailPoint = 5
+
+		--	EXEC USP_GM_DataExtraction @ModelGroupID= @MGID, @ExecutionMode=1
+
+			
+		--END
+		------------------------------------------------------------------
+		--Generic Table for holding indicators raw data for each model group
+		------------------------------------------------------------------
 
 			EXEC [USP_VM2F_BDU_Class_Indicators_PreDataExtraction] @SolutionID=@SolutionID, @ModelgroupID=@ModelgroupID
 
-	--		EXEC USP_GM_DataExtraction @ModelGroupID= @MGID, @ExecutionMode=1
+			IF OBJECT_ID('tempdb..#ATM_GM_Indicators_RawData') IS NOT NULL
+				DROP TABLE #ATM_GM_Indicators_RawData
+
+			CREATE TABLE #ATM_GM_Indicators_RawData (Dummy int) --Table created with dummy column that will be altered and dropped inside the data extraction module	
+
+
+			EXEC USP_GM_DataExtraction @ModelGroupID= @MGID, @ExecutionMode=2
 
 			
-	--	END
-	--	------------------------------------------------------------------
-	--	--Generic Table for holding indicators raw data for each model group
-	--	------------------------------------------------------------------
-	--	IF @ExecutionMode IN(0,2) AND EXISTS (select top 1 1 from #ATM_GM_ModelingParameters where ModelID = @MID and ParameterId=21)
-	--	BEGIN
-	--		IF OBJECT_ID('tempdb..#ATM_GM_Indicators_RawData') IS NOT NULL
-	--			DROP TABLE #ATM_GM_Indicators_RawData
-
-	--		CREATE TABLE #ATM_GM_Indicators_RawData (Dummy int) --Table created with dummy column that will be altered and dropped inside the data extraction module	
-
-	--		SET @FailPoint = 6
-
-	--		INSERT INTO @ModelGroupInfoLog(Step,StartTime)
-	--		SELECT 'Indicators DataExtraction-Model Group '+convert(varchar(5),@MGID),GETUTCDATE()
-
-	--		EXEC USP_GM_DataExtraction @ModelGroupID= @MGID, @ExecutionMode=2
-
-	--		UPDATE @ModelGroupInfoLog
-	--		SET EndTime = GETUTCDATE()
-	--		WHERE Step='Indicators DataExtraction-Model Group '+convert(varchar(5),@MGID)
-	--	END
 	--	---------------------------------------------------------------------------------------
 	--	--Creating a table that holds all the model id's in the framework for current solution and model group
 	--	---------------------------------------------------------------------------------------
 	--	SET @FailPoint = 7
 
-	--	IF OBJECT_ID('tempdb..#ATM_GM_Models') IS NOT NULL
-	--		DROP TABLE #ATM_GM_Models
+		IF OBJECT_ID('tempdb..#ATM_GM_Models') IS NOT NULL
+			DROP TABLE #ATM_GM_Models
 
-	--	CREATE TABLE #ATM_GM_Models (ModelID int)
+		CREATE TABLE #ATM_GM_Models (ModelID int)
 
-	--	INSERT INTO #ATM_GM_Models
-	--	SELECT DISTINCT ModelID
-	--	FROM #ATM_GM_ModelGroups
-	--	WHERE ModelGroupId = @MGID
+		INSERT INTO #ATM_GM_Models
+		SELECT DISTINCT ModelID
+		FROM #ATM_GM_ModelGroups
+		WHERE ModelGroupId = @MGID
 
 	--	WHILE EXISTS(SELECT 1 FROM #ATM_GM_Models)
 	--	BEGIN
 			
-	--		SELECT @MID= MIN(ModelID)
-	--		FROM #ATM_GM_Models
+			SELECT @MID= MIN(ModelID)
+			FROM #ATM_GM_Models
 
 	--		-------------
 	--		-- Modeling
@@ -141,26 +137,23 @@ SET @FailPoint = 3
 	--			------------------------------------------------------------------
 	--			--Generic Table for holding prepared data for each model
 	--			------------------------------------------------------------------
-	--			SET @FailPoint = 8
 
-	--			IF OBJECT_ID('tempdb..#ATM_GM_PreparedData') IS NOT NULL
-	--				DROP TABLE #ATM_GM_PreparedData
+				--IF OBJECT_ID('tempdb..#ATM_GM_PreparedData') IS NOT NULL
+				--	DROP TABLE #ATM_GM_PreparedData
 
-	--			CREATE TABLE #ATM_GM_PreparedData (Dummy int)--Table created with dummy column that will be altered and dropped in the next query
+				--CREATE TABLE #ATM_GM_PreparedData (Dummy int)--Table created with dummy column that will be altered and dropped in the next query
 
-	--			SET @FailPoint = 9 -- Creating the PreparedData table
+				--SELECT @CMD = 'ALTER TABLE #ATM_GM_PreparedData ADD '+Value
+				--FROM #ATM_GM_ModelingParameters
+				--WHERE ModelID = @MID
+				-- AND ParameterId=4 -- Parameter 4 is the modeling PreparedData table schema
 
-	--			SELECT @CMD = 'ALTER TABLE #ATM_GM_PreparedData ADD '+Value
-	--			FROM #ATM_GM_ModelingParameters
-	--			WHERE ModelID = @MID
-	--			 AND ParameterId=4 -- Parameter 4 is the modeling PreparedData table schema
+				--PRINT(@CMD)
+				--EXEC(@CMD)
 
-	--			--PRINT(@CMD)
-	--			EXEC(@CMD)
-
-	--			--Removing the dummy column
-	--			ALTER TABLE #ATM_GM_PreparedData
-	--			DROP COLUMN Dummy
+				----Removing the dummy column
+				--ALTER TABLE #ATM_GM_PreparedData
+				--DROP COLUMN Dummy
 
 	--			------------------------------------------------------------------
 	--			--Population Filter
@@ -202,12 +195,7 @@ SET @FailPoint = 3
 
 	--			------------------------------------------------------------------
 	--			--Populating Data Preperation table
-	--			------------------------------------------------------------------
-
-	--			SET @FailPoint = 11 -- Executing the data preperation SP
-
-	--			INSERT INTO @ModelGroupInfoLog(Step,StartTime)
-	--			SELECT 'Modeling DataPreperation-Model '+convert(varchar(5),@MID),GETUTCDATE()
+	----			------------------------------------------------------------------
 
 	--			SELECT @CMD = Value
 	--			FROM #ATM_GM_ModelingParameters
@@ -216,10 +204,6 @@ SET @FailPoint = 3
 
 	--			PRINT(@CMD)
 	--			EXEC(@CMD)
-
-	--			UPDATE @ModelGroupInfoLog
-	--			SET EndTime = GETUTCDATE()
-	--			WHERE Step = 'Modeling DataPreperation-Model '+convert(varchar(5),@MID)
 
 	--			--SELECT * FROM  #ATM_GM_PreparedData -- For Testing
 			
@@ -277,46 +261,42 @@ SET @FailPoint = 3
 	--			------------------------------------------------------------------
 	--			--Generic Table for holding prepared data for each model
 	--			------------------------------------------------------------------
-	--			IF OBJECT_ID('tempdb..#ATM_GM_Indicators_PreparedData') IS NOT NULL
-	--				DROP TABLE #ATM_GM_Indicators_PreparedData
+				IF OBJECT_ID('tempdb..#ATM_GM_Indicators_PreparedData') IS NOT NULL
+					DROP TABLE #ATM_GM_Indicators_PreparedData
 
-	--			CREATE TABLE #ATM_GM_Indicators_PreparedData (Dummy int)--Table created with dummy column that will be altered and dropped in the next query
+				CREATE TABLE #ATM_GM_Indicators_PreparedData (Dummy int)--Table created with dummy column that will be altered and dropped in the next query
 
-	--			SET @FailPoint = 14 -- Creating the PreparedData table
+				SET @FailPoint = 14 -- Creating the PreparedData table
 
-	--			SELECT @CMD = 'ALTER TABLE #ATM_GM_Indicators_PreparedData ADD '+Value
-	--			FROM #ATM_GM_ModelingParameters
-	--			WHERE ModelID = @MID
-	--			 AND ParameterId=22 -- Parameter 22 is the indicators PreparedData table schema
+				SELECT @CMD = 'ALTER TABLE #ATM_GM_Indicators_PreparedData ADD '+Value
+				FROM #ATM_GM_ModelingParameters
+				WHERE ModelID = @MID
+				 AND ParameterId=22 -- Parameter 22 is the indicators PreparedData table schema
 
-	--			--PRINT(@CMD)
-	--			EXEC(@CMD)
+				PRINT(@CMD)
+				EXEC(@CMD)
 
-	--			--Removing the dummy column
-	--			ALTER TABLE #ATM_GM_Indicators_PreparedData
-	--			DROP COLUMN Dummy
-
+				--Removing the dummy column
+				ALTER TABLE #ATM_GM_Indicators_PreparedData
+				DROP COLUMN Dummy
+				
 	--			------------------------------------------------------------------
 	--			--Populating Indicators prepared data table
 	--			------------------------------------------------------------------
 
-	--			SET @FailPoint = 15 -- Executing the indicators data preperation SP
+				SELECT @CMD = Value
+				FROM #ATM_GM_ModelingParameters
+				WHERE ModelID = @MID
+				 AND ParameterId=23 -- Parameter 23 is the indicators data preparation SP
 
-	--			INSERT INTO @ModelGroupInfoLog(Step,StartTime)
-	--			SELECT 'Indicators DataPreperation-Model '+convert(varchar(5),@MID),GETUTCDATE()
+				PRINT(@CMD)
+				EXEC(@CMD)
 
-	--			SELECT @CMD = Value
-	--			FROM #ATM_GM_ModelingParameters
-	--			WHERE ModelID = @MID
-	--			 AND ParameterId=23 -- Parameter 23 is the indicators data preparation SP
+				SELECT * FROM #ATM_GM_Indicators_PreparedData
 
-	--			PRINT(@CMD)
-	--			EXEC(@CMD)
-
-	--			UPDATE @ModelGroupInfoLog
-	--			SET EndTime = GETUTCDATE()
-	--			WHERE Step = 'Indicators DataPreperation-Model '+convert(varchar(5),@MID)
-	--		END
+			
+				
+			--END
 
 	--		--INDICATORS!!!!
 	--		exec [dbo].[USP_GM_IndicatorProcedure] @ModelID =@MID
