@@ -29,5 +29,5 @@ rem ---------------------------------------------
 :success
 SET "cmd=SecureRunAs %user% %dir%%proc% %parameter%=%parameterID% @ExecutionMode=%executionMode%\" %dataBase%""
 echo %cmd%
-rem %cmd%
+%cmd%
 

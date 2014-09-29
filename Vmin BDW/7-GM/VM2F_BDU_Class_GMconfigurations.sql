@@ -83,7 +83,7 @@ INSERT INTO GM_D_Parameters VALUES(104,'Import Query - Indicators - MUTB_LATO_Va
 INSERT INTO GM_D_Parameters VALUES(105,'Import Query - Indicators - MUTB_Within_LOTS_Latest_Flag (VM2F)',1,NULL)
 INSERT INTO GM_D_Parameters VALUES(123,'Import Query - Indicators - MUTB_Within_SubFlowStep_Latest_Flag (VM2F)',1,NULL)
 INSERT INTO GM_D_Parameters VALUES(107,'Import Query - Indicators - Summary_Letter (VM2F)',1,NULL)
-INSERT INTO GM_D_Parameters VALUES(108,'Import Query - Indicators - SubStructure_ID (VM2F)',3,NULL)
+INSERT INTO GM_D_Parameters VALUES(108,'Import Query - Indicators - SubStructure_ID (VM2F)',1,NULL)
 
 --ModelGroup Level
 INSERT INTO GM_D_Parameters VALUES(101,'Import Query - Indicators - Having Clause SumTested  (VM2F)',2,NULL)
@@ -339,7 +339,6 @@ INSERT INTO [GM_F_ModelingParameters] VALUES(20,-1,-1,NULL,20,'
 			AND <<MUTB_LATO_Valid_Flag>>        
 			AND <<MUTB_Within_LOTS_Latest_Flag>>
 			AND <<Within_SubFlowStep_Latest_Flag>>
-
 			AND <<Facility_to_Ignore>>
 			AND <<DevRevStep_Template>>
 			AND <<wip_env_id>>
@@ -974,6 +973,10 @@ INSERT INTO GM_D_Features VALUES(20009909,20,'DFF_PBIC_S1_SAP1','6881','','','',
 -----------------------------------------------------------------------------------------------------------------------
 
 ---------------------------------------- IndicatorCalculatedFields ----------------------------------------------------------
+-- I represtns a ranking index for all the rows in the partition. 
+-- N represnts one row from the partition.
+-- The condition I=N as seen bellow means that we select only one row from a certain partition
+
 INSERT INTO [GM_D_IndicatorCalculatedFields] VALUES (3,'RANK() OVER  (PARTITION BY Test_Program,ModelID,UnitID,WW,Test_Date ORDER BY Test_Program,ModelID,UnitID,FeatureID)','I')
 INSERT INTO [GM_D_IndicatorCalculatedFields] VALUES (4,'COUNT(*) OVER (PARTITION BY  Test_Program,ModelID,UnitID,WW,Test_Date)','N')
 

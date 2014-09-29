@@ -14,9 +14,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 --------------------------------------------
 
-CREATE PROCEDURE USP_VM2F_BDU_Class_Indicators_PreDataExtraction  
-		@SolutionID INT
-	   ,@ModelGroupID INT
+CREATE PROCEDURE USP_VM2F_BDU_Class_Indicators_PreDataExtraction  @SolutionID INT ,@ModelGroupID INT
 
 AS 
 
@@ -25,18 +23,18 @@ BEGIN TRY
 	DECLARE @SQL VARCHAR(MAX)=NULL   
 		   ,@ImportQuery VARCHAR(MAX)=NULL
 		   ,@ParameterValue VARCHAR(MAX)=NULL
-		   ,@FailPoint VARCHAR(MAX)=NULL
+		   ,@FailPoint INT
+		   ,@ErrorMessage VARCHAR(MAX)=NULL
 		   ,@DaysBack INT=NULL
 		   ,@DaysToImport INT=NULL
-
-
-	SET @FailPoint='1'
 
 	
 	------------------------------------------------------------------------------------------
 	/*								select Import query										*/
 	------------------------------------------------------------------------------------------
-    SELECT @ImportQuery=Value
+    SET @FailPoint=1
+
+	SELECT @ImportQuery=Value
 	FROM #ATM_GM_ModelingParameters
 	WHERE SolutionID=@SolutionID
 	AND ModelGroupID=@ModelGroupID
@@ -47,6 +45,8 @@ BEGIN TRY
 	------------------------------------------------------------------------------------------
 
 	------------------------------- Operation -------------------------------
+	SET @FailPoint=2
+
 	SELECT @ParameterValue=Value
 	FROM #ATM_GM_ModelingParameters
 	WHERE SolutionID=@SolutionID
@@ -58,6 +58,8 @@ BEGIN TRY
 
 	
 	--------------------------------- SumTested -------------------------------
+	SET @FailPoint=3
+
 	SELECT @ParameterValue=Value
 	FROM #ATM_GM_ModelingParameters
 	WHERE ModelGroupID=@ModelGroupID
@@ -66,46 +68,56 @@ BEGIN TRY
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<SumTested>>',@ParameterValue)
 
 	------------------------------- MLOTS_LATO_Valid_Flag -------------------------------
+	SET @FailPoint=4
+
 	SELECT @ParameterValue=Value
 	FROM #ATM_GM_ModelingParameters
 	WHERE SolutionID=@SolutionID
 	AND ParameterID=102	
 
-    SELECT @SQL='MLOTS.LATO_Valid_Flag='''+@ParameterValue+''''
+    SELECT @SQL=CASE WHEN @ParameterValue IN ('Y','N') THEN 'MLOTS.LATO_Valid_Flag='''+@ParameterValue+'''' ELSE '1=1' END
 
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<MLOTS_LATO_Valid_Flag>>',@SQL)
 
 	------------------------------- MLOTS_LOTS_Complete_Flag -------------------------------
+	SET @FailPoint=5
+
 	SELECT @ParameterValue=Value
 	FROM #ATM_GM_ModelingParameters
 	WHERE SolutionID=@SolutionID
 	AND ParameterID=103	
 
-    SELECT @SQL='MLOTS.LOTS_Complete_Flag='''+@ParameterValue+''''
+    SELECT @SQL=CASE WHEN @ParameterValue IN ('Y','N') THEN 'MLOTS.LOTS_Complete_Flag='''+@ParameterValue+'''' ELSE '1=1' END
 
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<MLOTS_LOTS_Complete_Flag>>',@SQL)
 
 	------------------------------- MUTB_LATO_Valid_Flag -------------------------------
+	SET @FailPoint=6
+
 	SELECT @ParameterValue=Value
 	FROM #ATM_GM_ModelingParameters
 	WHERE SolutionID=@SolutionID
 	AND ParameterID=104	
 
-    SELECT @SQL='MUTB.LATO_Valid_Flag='''+@ParameterValue+''''
+    SELECT @SQL=CASE WHEN @ParameterValue IN ('Y','N') THEN 'MUTB.LATO_Valid_Flag='''+@ParameterValue+'''' ELSE '1=1' END
 
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<MUTB_LATO_Valid_Flag>>',@SQL)
 
 	------------------------------- MUTB_Within_LOTS_Latest_Flag -------------------------------
+	SET @FailPoint=7
+
 	SELECT @ParameterValue=Value
 	FROM #ATM_GM_ModelingParameters
 	WHERE SolutionID=@SolutionID
 	AND ParameterID=105	
 
-    SELECT @SQL='MUTB.Within_LOTS_Latest_Flag='''+@ParameterValue+''''
+   SELECT @SQL=CASE WHEN @ParameterValue IN ('Y','N') THEN 'MUTB.Within_LOTS_Latest_Flag='''+@ParameterValue+'''' ELSE '1=1' END
 
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<MUTB_Within_LOTS_Latest_Flag>>',@SQL)
 
 	------------------------------- Temperature -------------------------------
+	SET @FailPoint=8
+
 	SELECT @ParameterValue=Value
 	FROM #ATM_GM_ModelingParameters
 	WHERE ModelGroupID=@ModelGroupID
@@ -116,6 +128,8 @@ BEGIN TRY
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<Temperature>>',@SQL)
 
 	------------------------------- Summary_Letter -------------------------------
+	SET @FailPoint=9
+
 	SELECT @ParameterValue=Value
 	FROM #ATM_GM_ModelingParameters
 	WHERE SolutionID=@SolutionID
@@ -126,6 +140,8 @@ BEGIN TRY
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<Summary_Letter>>',@SQL)
 
 	------------------------------- SubStructure_ID -------------------------------
+	SET @FailPoint=10
+
 	SELECT @ParameterValue=Value
 	FROM #ATM_GM_ModelingParameters
 	WHERE SolutionID=@SolutionID
@@ -135,6 +151,8 @@ BEGIN TRY
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<SubStructure_ID>>',@SQL)
 
 	------------------------------- Test_Program_Pattern ------------------------------
+	SET @FailPoint=11
+
 	SET	@ParameterValue=NULL
 
 	SELECT @ParameterValue=ISNULL(@ParameterValue,'')+Value
@@ -148,6 +166,8 @@ BEGIN TRY
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<Test_Program_Pattern>>',@SQL)
 
 	------------------------------- Values To Ignore ------------------------------
+	SET @FailPoint=12
+
 	SET	@ParameterValue=NULL
 
 	SELECT @ParameterValue=ISNULL( @ParameterValue+' AND MLOTS.Program_Or_BI_Recipe_Name NOT LIKE ''%'+RES.Value+'%''','(MLOTS.Program_Or_BI_Recipe_Name NOT LIKE ''%'+RES.Value+'%'' ')
@@ -161,6 +181,7 @@ BEGIN TRY
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<ValuesToIgnore>>',@SQL)
 			
 	 ------------------------------- DateRange -------------------------------
+	 SET @FailPoint=13
 
 	SELECT @DaysBack=CAST(value AS int)
 	FROM #ATM_GM_ModelingParameters
@@ -179,6 +200,8 @@ BEGIN TRY
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<DateRange>>',@SQL)
 
 	------------------------------- wip_env_id ------------------------------
+	SET @FailPoint=14
+
 	SET	@ParameterValue=NULL
 
 	SELECT @ParameterValue=Value
@@ -190,7 +213,9 @@ BEGIN TRY
 	
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<wip_env_id>>',@SQL)
 
-	------------------------------- DevRevStep_Template ------------------------------
+	------------------------------- DevRevStep_Template -----------------------------
+	SET @FailPoint=15
+	
 	SET	@ParameterValue=NULL
 
 	SELECT @ParameterValue=Value
@@ -203,6 +228,8 @@ BEGIN TRY
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<DevRevStep_Template>>',@SQL)
 
 	------------------------------- Facility_to_Ignore ------------------------------
+	SET @FailPoint=16
+	
 	SET	@ParameterValue=NULL
 
 	SELECT @ParameterValue=Value
@@ -215,11 +242,24 @@ BEGIN TRY
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<Facility_to_Ignore>>',@SQL)
 
 
+	------------------------------- Within_SubFlowStep_Latest_Flag -------------------------------
+	SET @FailPoint=17
+	
+	SELECT @ParameterValue=Value
+	FROM #ATM_GM_ModelingParameters
+	WHERE SolutionID=@SolutionID
+	AND ParameterID=123
+
+    SELECT @SQL=CASE WHEN @ParameterValue IN ('Y','N') THEN 'MUTB.Within_SubFlowStep_Latest_Flag='''+@ParameterValue+'''' ELSE '1=1' END
+
+	SET @ImportQuery=REPLACE(@ImportQuery,'<<Within_SubFlowStep_Latest_Flag>>',@SQL)
+
 	------------------------------------------------------------------------------------------
 	/*								update Test Names										*/
 	------------------------------------------------------------------------------------------
 
 	------------------------------- Test_Name Vmin Test -------------------------------
+	SET @FailPoint=18
 
 	SET @ParameterValue=NULL
 
@@ -239,6 +279,7 @@ BEGIN TRY
 	SET @ImportQuery=REPLACE(@ImportQuery,'<<Test_Name Vmin Test>>',@SQL)
 
 	------------------------------- Test_Name Prediction DFF -------------------------------
+	SET @FailPoint=19
 
 	SET @ParameterValue=NULL
 
@@ -253,6 +294,7 @@ BEGIN TRY
 	------------------------------------------------------------------------------------------
 	/*				update #ATM_GM_ModelingParameters Import query field					*/
 	------------------------------------------------------------------------------------------
+	SET @FailPoint=20
 
 	UPDATE #ATM_GM_ModelingParameters
 	SET Value=@ImportQuery
@@ -262,7 +304,12 @@ BEGIN TRY
 	AND ParameterID=20
 
 END TRY
+
 BEGIN CATCH  	
-	PRINT ('Fail Point: '+ @FailPoint + ' - ' + ERROR_MESSAGE())
+	SET @ErrorMessage = 'Fail Point: ' + CONVERT(VARCHAR(3), @FailPoint) +' '+ ERROR_MESSAGE()
+	SELECT @ErrorMessage
+	EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_VM2F_BDU_Class_Indicators_PreDataExtraction', @EngineName = 'VM2F', 
+							@ModuleName = 'Indicators', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
+	RAISERROR (N'USP_VM2F_BDU_Class_Indicators_PreDataExtraction::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)
 END CATCH 
 GO

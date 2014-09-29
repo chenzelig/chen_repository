@@ -2,8 +2,8 @@
 --USE MFG_Solutions
 --GO
 
---IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_VM2F_BDU_Class_Indicators_DataPreparation]') AND type in (N'P', N'PC'))
---	DROP PROCEDURE [dbo].[USP_VM2F_BDU_Class_Indicators_DataPreparation]
+--IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[USP_VM2F_BDU_Class_Indicators_GenerateReport]') AND type in (N'P', N'PC'))
+--	DROP PROCEDURE [dbo].[USP_VM2F_BDU_Class_Indicators_GenerateReport]
 
 --GO
 
@@ -14,7 +14,7 @@
 --GO
 
 
---CREATE PROCEDURE USP_VM2F_BDU_Class_Indicators_DataPreparation @SolutionID INT, @ModelGroupID INT,@ModelID INT ,@DebugMode INT=0
+--CREATE PROCEDURE USP_VM2F_BDU_Class_Indicators_GenerateReport @SolutionID INT, @ModelGroupID INT,@ModelID INT ,@DebugMode INT=0
 
 --AS 
 
@@ -74,8 +74,8 @@ CREATE TABLE #PreparedData_PerModel( [BOMGROUP] VARCHAR(MAX),[Domain] VARCHAR(MA
 									 ,[OverShoot] INT, [OverShoot Percent] FLOAT, [Prediction Calculated Count] INT, [Prediction Calculated Percent] FLOAT, [Prediction Used Count] INT, [Prediction Used Percent] FLOAT, [Prediction Justified Unused Count] INT
 								 	 ,[Prediction Unjustified Unused Count] INT, [Prediction Unexplained Unused Count] INT )
 
-CREATE TABLE #PreparedData_PerModelGroup ( [BOMGROUP] VARCHAR(MAX),[Vmin Count] INT,[Tests Results Count] INT, [Saved Steps] FLOAT, [Saved Steps Percent] FLOAT, [Potential OverShoot] INT,[Certain OverShoot] INT
-									 ,[OverShoot] INT, [OverShoot Percent] FLOAT, [Prediction Calculated Percent] FLOAT, [Prediction Used Percent] FLOAT)
+CREATE TABLE #PreparedData_PerModelGroup ( [BOMGROUP] VARCHAR(MAX),[Vmin Count] INT,[Tests Results Count] INT, [Saved Steps] FLOAT, [Saved Steps Percent] FLOAT, [Potential OverShoot] FLOAT,[Certain OverShoot] FLOAT
+									 ,[OverShoot] FLOAT, [OverShoot Percent] FLOAT, [Prediction Calculated Percent] FLOAT, [Prediction Used Percent] FLOAT)
 
 
 ----------------------------------------------------------------------------------------------------------------------
@@ -288,6 +288,7 @@ SELECT	 [BOMGROUP]
 		,[Prediction Unexplained Unused Count]=[Prediction_Unexplained_Unused_CNT]
 FROM #AggregatedData
 
+
 ----------------------------------------------------------------------------------------------------------------------
 --										Populate #PreparedData_PerModelGroup - Output Table 
 ----------------------------------------------------------------------------------------------------------------------
@@ -295,19 +296,18 @@ SET @FailPoint='7'
 
 INSERT INTO #PreparedData_PerModelGroup
 SELECT	 [BOMGROUP]
-		,[Vmin Count]=SUM([Vmin Count])
-		,[Tests Results Count]=SUM([Tests Results Count])
-		,[Saved Steps]=1.0*SUM([Saved Steps]*[Vmin Count])/SUM([Vmin Count])
-		,[Saved Steps Percent] =1.0*SUM([Saved Steps Percent]*[Vmin Count])/SUM([Vmin Count])
-		,[Potential OverShoot]=1.0*SUM([Potential OverShoot]*[Vmin Count])/SUM([Vmin Count])
-		,[Certain OverShoot]=1.0*SUM([Certain OverShoot]*[Vmin Count])/SUM([Vmin Count]) 
-		,[OverShoot]=1.0*SUM([OverShoot]*[Vmin Count])/SUM([Vmin Count]) 
-		,[OverShoot Percent] =1.0*SUM([OverShoot Percent]*[Vmin Count])/SUM([Vmin Count]) 
+		,[Vmin Count]=SUM([Vmin Count]) 
+		,[Tests Results Count]=CAST(SUM([Tests Results Count]) AS decimal(18,4))
+		,[Saved Steps]=CAST(1.0*SUM([Saved Steps]*[Vmin Count])/SUM([Vmin Count]) AS decimal(18,4))
+		,[Saved Steps Percent] =CAST(1.0*SUM([Saved Steps Percent]*[Vmin Count])/SUM([Vmin Count]) AS decimal(18,4))
+		,[Potential OverShoot]=CAST(1.0*SUM([Potential OverShoot]*[Vmin Count])/SUM([Vmin Count]) AS decimal(18,4))
+		,[Certain OverShoot]=CAST(1.0*SUM([Certain OverShoot]*[Vmin Count])/SUM([Vmin Count]) AS decimal(18,4))
+		,[OverShoot]=CAST(1.0*SUM([OverShoot]*[Vmin Count])/SUM([Vmin Count]) AS decimal(18,4))
+		,[OverShoot Percent] =CAST(1.0*SUM([OverShoot Percent]*[Vmin Count])/SUM([Vmin Count]) AS decimal(18,4))
 		,[Prediction Calculated Percent] =CAST(1.0*SUM(1.0*[Prediction Calculated Percent]*[Tests Results Count])/SUM([Tests Results Count])  AS decimal(18,4))
-		,[Prediction Used Percent]=1.0*SUM([Prediction Used Percent]*[Tests Results Count])/SUM([Tests Results Count]) 
+		,[Prediction Used Percent]=CAST(1.0*SUM([Prediction Used Percent]*[Tests Results Count])/SUM([Tests Results Count]) AS decimal(18,4))
 FROM #PreparedData_PerModel
 GROUP BY BOMGROUP
-
 
 -- Output
 DROP table PreparedData_PerModel
@@ -315,6 +315,8 @@ DROP table PreparedData_PerModelGroup
 SELECT * INTO PreparedData_PerModel FROM #PreparedData_PerModel
 SELECT * INTO PreparedData_PerModelGroup FROM #PreparedData_PerModelGroup
 
+select* FROM PreparedData_PerModel  ORDER BY BOMGROUP
+select* FROM PreparedData_PerModelGroup ORDER BY BOMGROUP
 ------------------------------------- END proc ---------------------------------
 --END TRY
 --BEGIN CATCH  	

@@ -20,11 +20,23 @@ AS
 
 BEGIN TRY 
 
+/*--------------------------------------- Assumptions ---------------------------------------
+* product value belongs to parameterID 115
+* Domain_Corner_Flow belongs to parameterID 115
+* Feature_ActualValue belongs to index number [1] in the import string.
+* Feature_MinValue belongs to index number [4] in the import string.
+* Feature_Step belongs to index number [11] in the import string.
+* Prediction TestName has the following pattern "DFF_PBIC_%"
+*/
+
 ---------------------------------------- Declare Variables ----------------------------------- 
 DECLARE  @SQL VARCHAR(MAX)=NULL   
 		,@ImportQuery VARCHAR(MAX)=NULL
-		,@ParameterValue VARCHAR(MAX)=NULL
-		,@FailPoint VARCHAR(MAX)=NULL
+		,@ProductValue VARCHAR(MAX)=NULL
+		,@FailPoint INT=NULL
+		,@ErrorMessage VARCHAR(MAX)=NULL
+		,@ProductValue_Parameter INT=115
+		,@DomainCornerFlow_Parameter INT=116
 
 ------------------------------------------ Create Tables ---------------------------------
 
@@ -34,26 +46,35 @@ IF OBJECT_ID('tempdb..#Predictions') IS NOT NULL
 IF OBJECT_ID('tempdb..#Actuals') IS NOT NULL 
 	DROP TABLE #Actuals
 
---------------------------------------- select product value ---------------------------------
-SET @FailPoint='1'
+CREATE TABLE #Predictions(UnitID INT,Test_Program VARCHAR(MAX),ModelID INT ,[Model_Prediction] FLOAT)
 
-SELECT @ParameterValue= CONVERT(VARCHAR(10),Value)
+CREATE TABLE #Actuals (UnitID INT,Test_Program VARCHAR(MAX),Test_Name VARCHAR(MAX),WW INT,Test_Date DATETIME, Feature_ActualValue FLOAT, Feature_MinValue FLOAT, Feature_Step INT, Feature_GB FLOAT
+					  ,Model_MaxValue FLOAT ,Model_NumOfSteps INT, SolutionID INT ,ModelID INT,FeatureID INT)
+--------------------------------------- select product value ---------------------------------
+SET @FailPoint=1
+
+SELECT @ProductValue= CONVERT(VARCHAR(10),Value)
 FROM #ATM_GM_ModelingParameters
-WHERE ModelGroupID=@ModelGroupID
-AND ParameterID=115
+WHERE SolutionID=@SolutionID
+AND ModelGroupID=@ModelGroupID
+AND ModelID=@ModelID
+AND ParameterID=@ProductValue_Parameter 
 
 ------------------------------------- Populate #predictions table ---------------------------------
-SET @FailPoint='2'
+SET @FailPoint=2
 
+INSERT INTO #Predictions
 SELECT UnitID,Test_Program,ModelID,[Model_Prediction]
-INTO #Predictions
 FROM(
 	SELECT   *
 			,[Model_Prediction]=CASE WHEN Place=1 THEN SUBSTRING(Value, CHARINDEX(':',Value)+1,LEN(Value)) 
 											ELSE Value END
 
 			,[flow]=place 
-			,[DomainCornerFlow]=SUBSTRING(Test_Name,13,2)+'_'+SUBSTRING(Test_Name,15,10)+'_'+CONVERT(varchar(max),place)
+			,[DomainCornerFlow]=CASE WHEN LEN(SUBSTRING(Test_Name,13,100))=5 THEN LEFT(SUBSTRING(Test_Name,13,100),3)
+																			 ELSE LEFT(SUBSTRING(Test_Name,13,100),2)
+																			 END
+								+'_'+RIGHT(SUBSTRING(Test_Name,13,100),2)+'_'+CONVERT(varchar(max),place)
 	FROM(
 		SELECT 
 			 UnitID
@@ -63,35 +84,44 @@ FROM(
 			,PrePlace=place
 			,PreValue=value
 		FROM #ATM_GM_Indicators_RawData 
-		CROSS APPLY UDF_GetStringTableFromList_New(Test_Result,'^',@ParameterValue) -- @ParameterValue --> select only the relevant product (e.g. place = ULT place) 
+		CROSS APPLY UDF_GetStringTableFromList_New(Test_Result,'^',@ProductValue) -- @ProductValue --> select only the relevant product (e.g. place = ULT place) 
 		where 1=1
 		AND Test_Name LIKE 'DFF_PBIC%' --Include Only Predictions
 	) Res1
 	CROSS APPLY UDF_GetStringTableFromList_New(PreValue,'|',NULL) 
 	WHERE 1=1
-	--AND Value!='' -- we do want to take in account units which dont have predictions (that' why it appears as a comma)
+	AND Value!='' -- dont take in account units which dont have predictions 
 )Res2
-INNER JOIN  [GM_F_ModelingParameters] MP 
+INNER JOIN  #ATM_GM_ModelingParameters MP -- Filter predictions only on the relevant modelID 
 ON MP.SolutionID=@SolutionID
 AND MP.ModelGroupID=@ModelGroupID
-AND MP.ModelID=@ModelID -- Create Indicators only on the relevant ModelID
-AND MP.ParameterID=116 --Predictions - Domain_Corner_Flow
-AND MP.Value=Res2.DomainCornerFlow -- compare modelID's Names (e.g. CLR_P1_1)
+AND MP.ModelID=@ModelID
+AND MP.ParameterID=@DomainCornerFlow_Parameter
+AND MP.Value=Res2.DomainCornerFlow 
 ORDER BY MP.ModelID,Res2.UnitID
 
 IF @DebugMode=1
 	SELECT * FROM #Predictions
 
 ------------------------------------- Populate #Actuals table ---------------------------------
-SET @FailPoint='3'
+SET @FailPoint=3
 
-SELECT Res2.*
-	  ,Model_MaxValue=MAX(Feature_ActualValue) OVER (PARTITION BY Res2.Test_Program,MF.ModelID,Res2.UnitID)
-	  ,Model_NumOfSteps=SUM(Feature_Step) OVER (PARTITION BY Res2.Test_Program,MF.ModelID,Res2.UnitID)
+INSERT INTO #Actuals
+SELECT 
+	   Res2.UnitID 
+	  ,Res2.Test_Program
+	  ,Res2.Test_Name
+	  ,Res2.WW
+	  ,Res2.Test_Date
+	  ,Res2.Feature_ActualValue
+	  ,Res2.Feature_MinValue
+	  ,Res2.Feature_Step
+	  ,Res2.Feature_GB
+	  ,Model_MaxValue=MAX(Res2.Feature_ActualValue) OVER (PARTITION BY Res2.Test_Program,MF.ModelID,Res2.UnitID)
+	  ,Model_NumOfSteps=SUM(Res2.Feature_Step) OVER (PARTITION BY Res2.Test_Program,MF.ModelID,Res2.UnitID)
 	  ,MF.SolutionID
 	  ,MF.ModelID 
 	  ,F.FeatureID
-INTO #Actuals
 FROM(
 	SELECT
 		 UnitID 
@@ -112,7 +142,7 @@ FROM(
 			 ,Test_Date
 			 ,Test_Result
 			 ,place
-			 ,Value=CASE WHEN ISNUMERIC(Value)=1 THEN CONVERT(FLOAT,Value) ELSE NULL END
+			 ,Value=CASE WHEN ISNUMERIC(Value)=1 THEN CONVERT(FLOAT,Value) ELSE NULL END 
 			FROM #ATM_GM_Indicators_RawData 
 			CROSS APPLY UDF_GetStringTableFromList_New(Test_Result,'|',null)
 			WHERE 1=1
@@ -137,7 +167,7 @@ IF @DebugMode=1
 	SELECT * FROM #Actuals
 
 ------------------------------------- Populate #PreparedData table ---------------------------------
-SET @FailPoint='3'
+SET @FailPoint=4
 
 INSERT INTO #ATM_GM_Indicators_PreparedData 
 SELECT A.UnitID
@@ -166,14 +196,20 @@ IF @DebugMode=1
 	SELECT * FROM #ATM_GM_Indicators_PreparedData
 
 --------------- Prevent trying to create indicators when there is no data ----------------------
+SET @FailPoint=5
 
 IF NOT EXISTS (SELECT TOP 1 * FROM #ATM_GM_Indicators_PreparedData)
 	DELETE FROM #ATM_GM_ModelIndicators WHERE ModelID=@ModelID
 
 ------------------------------------- END proc ---------------------------------
 END TRY
+  	
 BEGIN CATCH  	
-	PRINT ('Fail Point: '+ @FailPoint + ' - ' + ERROR_MESSAGE())
+	SET @ErrorMessage = 'Fail Point: ' + CONVERT(VARCHAR(3), @FailPoint) +' '+ ERROR_MESSAGE()
+	SELECT @ErrorMessage
+	EXEC AdvancedBIsystem.dbo.USP_GAL_InsertLogEvent @LogEventObjectName = 'USP_VM2F_BDU_Class_Indicators_DataPreparation', @EngineName = 'VM2F', 
+							@ModuleName = 'Indicators', @LogEventMessage = @ErrorMessage, @LogEventType = 'E' 
+	RAISERROR (N'USP_VM2F_BDU_Class_Indicators_DataPreparation::FailPoint- %d ERR-%s', 16,1, @FailPoint, @ErrorMessage)
 END CATCH 
 GO
 
