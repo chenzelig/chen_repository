@@ -1,5 +1,9 @@
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[GM_D_IndicatorLevels]') AND type in (N'U'))
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[GM_D_IndicatorLevels]') AND type in (N'U')) BEGIN
 	DROP TABLE [GM_F_ModelIndicators]
+	ALTER TABLE [GM_F_ModelIndicators] DROP CONSTRAINT [FK_GM_F_ModelIndicators_ModelID]
+	ALTER TABLE [GM_F_ModelIndicators] DROP CONSTRAINT [FK_GM_F_ModelIndicators_SolutionID]
+	ALTER TABLE [GM_F_ModelIndicators] DROP CONSTRAINT [FK_GM_F_ModelIndicators_ModelGroupID]
+END	
 
 CREATE TABLE [dbo].[GM_F_ModelIndicators](
 	[SolutionID] [int] NOT NULL,

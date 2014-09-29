@@ -16,9 +16,9 @@ GO
 insert into [dbo].[GM_D_TempDataTable] values
 (1,'#ATM_GM_RawData')
 insert into [dbo].[GM_D_TempDataTable] values
-(2,'#PreparedData')
+(2,'#ATM_GM_PreparedData')
 insert into [dbo].[GM_D_TempDataTable] values
 (3,'#ATM_GM_Indicators_RawData')
 insert into [dbo].[GM_D_TempDataTable] values
-(4,'ATM_GM_Indicators_PreparedData')
+(4,'#ATM_GM_Indicators_PreparedData')
 

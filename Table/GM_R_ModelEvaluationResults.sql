@@ -1,6 +1,7 @@
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[GM_R_ModelEvaluationResults]') AND type in (N'U'))
 	DROP TABLE [GM_R_ModelEvaluationResults]
-
+	ALTER TABLE [GM_R_ModelEvaluationResults] DROP CONSTRAINT [FK_GM_R_ModelEvaluationResults_EvaluationMeasureID]
+	ALTER TABLE [GM_R_ModelEvaluationResults] DROP CONSTRAINT [FK_GM_R_ModelEvaluationResults_ModelID]
 USE [MFG_Solutions]
 GO
 
