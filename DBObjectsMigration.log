@@ -1,4 +1,0 @@
-Msg 3726, Level 16, State 1, Server EG1SPASQLTS1\SQL01, Line 2
-Could not drop object 'dbo.GM_D_Indicators' because it is referenced by a FOREIGN KEY constraint.
-Msg 2714, Level 16, State 6, Server EG1SPASQLTS1\SQL01, Line 5
-There is already an object named 'GM_D_Indicators' in the database.

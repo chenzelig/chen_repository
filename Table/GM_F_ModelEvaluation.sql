@@ -1,9 +1,5 @@
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[GM_F_ModelEvaluation]') AND type in (N'U')) BEGIN
 	DROP TABLE [GM_F_ModelEvaluation]
-	ALTER TABLE [GM_F_ModelEvaluation] DROP CONSTRAINT [FK_GM_F_ModelEvaluation_EvaluationMeasureID]
-	ALTER TABLE [GM_F_ModelEvaluation] DROP CONSTRAINT [FK_GM_F_ModelEvaluation_ModelGroupID]
-	ALTER TABLE [GM_F_ModelEvaluation] DROP CONSTRAINT [FK_GM_F_ModelEvaluation_ModelID]
-	ALTER TABLE [GM_F_ModelEvaluation] DROP CONSTRAINT [FK_GM_F_ModelEvaluation_SolutionID]
 END
 
 /****** Object:  Table [dbo].[GM_F_ModelEvaluation]    Script Date: 8/7/2014 1:27:39 PM ******/
