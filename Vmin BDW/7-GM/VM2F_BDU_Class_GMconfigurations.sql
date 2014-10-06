@@ -17,7 +17,7 @@ DELETE FROM [GM_D_IndicatorCalculatedFields] WHERE IndicatorCalculatedFieldID IN
 DELETE FROM [GM_F_ModelingFeatures] WHERE SolutionID=20
 DELETE FROM [GM_D_Features] WHERE SolutionID=20
 DELETE FROM [GM_F_ModelingParameters] WHERE SolutionID=20
-DELETE FROM [GM_D_Parameters] WHERE ParameterID BETWEEN 100 AND 150
+DELETE FROM [GM_D_Parameters] WHERE ParameterID BETWEEN 100 AND 150 or ParameterID IN (20,21,22,23,24,25)
 
 -- Models
 DELETE FROM [GM_D_Models] WHERE SolutionID=20
@@ -72,7 +72,13 @@ INSERT INTO [dbo].[GM_D_ModelGroups] VALUES (20,2012,'VM2F_BDU_Class_22_ULX')
 ------------------------------------------------------------------------------------------------------------------------
 /*									Parameters Configuration															*/
 -----------------------------------------------------------------------------------------------------------------------
-
+----------------------------------------------- General GM ----------------------------------------------------
+INSERT INTO GM_D_Parameters VALUES (20	,'Indicators - Queries For Data Extraction via XML',	2,	NULL)
+INSERT INTO GM_D_Parameters VALUES (21	,'Indicators - Raw Data Schema'	,2,	NULL)
+INSERT INTO GM_D_Parameters VALUES (22	,'Indicators - Prepared Data Schema'	,3,	NULL)
+INSERT INTO GM_D_Parameters VALUES (23	,'Indicators - Data preparation Stored Procedure',	3,	NULL)
+INSERT INTO GM_D_Parameters VALUES (24	,'Modeling - DataExtraction Pre-Step'	,2	,NULL)
+INSERT INTO GM_D_Parameters VALUES (25	,'Indicators - DataExtraction Pre-Step'	,2,	NULL)
 
 ----------------------------------------------- Import Query ----------------------------------------------------
 --Solution Level
@@ -134,7 +140,7 @@ INSERT INTO [GM_F_ModelingParameters] VALUES (20,-1,-1,NULL,123,'Y')
 	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2011,-1,NULL,113,'1')
 	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2011,-1,NULL,114,'4')
 	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2011,-1,NULL,118,'0')
-	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2011,-1,NULL,119,'8%')
+	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2011,-1,NULL,119,'%')
 	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2011,-1,NULL,120,'')
 
 	--ULX
@@ -147,7 +153,7 @@ INSERT INTO [GM_F_ModelingParameters] VALUES (20,-1,-1,NULL,123,'Y')
 	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2012,-1,NULL,113,'1')
 	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2012,-1,NULL,114,'4')
 	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2012,-1,NULL,118,'0')
-	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2012,-1,NULL,119,'8%')
+	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2012,-1,NULL,119,'%')
 	INSERT INTO [GM_F_ModelingParameters] VALUES (20,2012,-1,NULL,120,'')
 
 ------------------------------------------------ Predictions ------------------------------------------------------
@@ -357,10 +363,10 @@ INSERT INTO [GM_F_ModelingParameters] VALUES(20,-1,-1,NULL,20,'
 		SELECT  
 			MUTB.Assembled_Unit_Seq_Key UnitID,      			  
 			MLOTS.Program_Or_BI_Recipe_Name Test_Program,
-			MTL.Test_Name Test,
-			MLOTS.LATO_Start_WW as WW,
-			CAST(MLOTS.LOTS_Start_Date_Time AS DATE) Test_Date,
-			C.Raw_Test_Data_Value Test_Result	  			  
+			MTL.Test_Name,
+			NULL AS WW,
+			CAST(NULL AS DATE) AS Test_Date,
+			Max(C.Raw_Test_Data_Value) AS Test_Result	  			  
 		FROM MDS_Lot_Oper_Testing_Session MLOTS
 				INNER JOIN MDS_Test_In_LOTS MTL
 						ON MTL.LATO_Start_WW = MLOTS.LATO_Start_WW 
@@ -406,6 +412,7 @@ INSERT INTO [GM_F_ModelingParameters] VALUES(20,-1,-1,NULL,20,'
 			AND <<SubStructure_ID>> 
 			AND <<Test_Name Prediction DFF>>
 			AND <<DateRange>>
+		GROUP BY MUTB.Assembled_Unit_Seq_Key, MLOTS.Program_Or_BI_Recipe_Name,MTL.Test_Name
 	</Query>	
 	</Row>
 </Queries>

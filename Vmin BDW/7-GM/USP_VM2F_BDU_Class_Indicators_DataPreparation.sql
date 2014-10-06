@@ -38,6 +38,32 @@ DECLARE  @SQL VARCHAR(MAX)=NULL
 		,@ProductValue_Parameter INT=115
 		,@DomainCornerFlow_Parameter INT=116
 
+----------------------------------- Create Clustered Index -------------------------------
+
+---- #ATM_GM_Indicators_RawData
+IF NOT EXISTS(SELECT
+					TableName = t.name, 
+					ClusteredIndexName = i.name
+				FROM sys.tables t
+				INNER JOIN sys.indexes i 
+				ON t.object_id = i.object_id
+				AND t.name='#ATM_GM_Indicators_RawData'
+				AND i.name IS NOT null
+			)
+CREATE CLUSTERED INDEX  ATM_GM_Indicators_RawData_I1 ON #ATM_GM_Indicators_RawData (UnitID,Test_Program,Test_Name, WW, Test_Date);
+
+------ #ATM_GM_ModelingParameters
+IF NOT EXISTS(SELECT
+					TableName = t.name, 
+					ClusteredIndexName = i.name
+				FROM sys.tables t
+				INNER JOIN sys.indexes i 
+				ON t.object_id = i.object_id
+				AND t.name='#ATM_GM_ModelingParameters'
+				AND i.name IS NOT null
+			)
+CREATE CLUSTERED INDEX  ATM_GM_ModelingParameters_I1 ON #ATM_GM_ModelingParameters (SolutionID,ModelGroupID,ModelID,FeatureID,ParameterID)
+
 ------------------------------------------ Create Tables ---------------------------------
 
 IF OBJECT_ID('tempdb..#Predictions') IS NOT NULL 
@@ -46,9 +72,9 @@ IF OBJECT_ID('tempdb..#Predictions') IS NOT NULL
 IF OBJECT_ID('tempdb..#Actuals') IS NOT NULL 
 	DROP TABLE #Actuals
 
-CREATE TABLE #Predictions(UnitID INT,Test_Program VARCHAR(MAX),ModelID INT ,[Model_Prediction] FLOAT)
+CREATE TABLE #Predictions(UnitID VARCHAR(MAX),Test_Program VARCHAR(MAX),ModelID INT ,[Model_Prediction] FLOAT)
 
-CREATE TABLE #Actuals (UnitID INT,Test_Program VARCHAR(MAX),Test_Name VARCHAR(MAX),WW INT,Test_Date DATETIME, Feature_ActualValue FLOAT, Feature_MinValue FLOAT, Feature_Step INT, Feature_GB FLOAT
+CREATE TABLE #Actuals (UnitID VARCHAR(MAX),Test_Program VARCHAR(MAX),Test_Name VARCHAR(MAX),WW INT,Test_Date DATETIME, Feature_ActualValue FLOAT, Feature_MinValue FLOAT, Feature_Step INT, Feature_GB FLOAT
 					  ,Model_MaxValue FLOAT ,Model_NumOfSteps INT, SolutionID INT ,ModelID INT,FeatureID INT)
 --------------------------------------- select product value ---------------------------------
 SET @FailPoint=1
@@ -57,7 +83,6 @@ SELECT @ProductValue= CONVERT(VARCHAR(10),Value)
 FROM #ATM_GM_ModelingParameters
 WHERE SolutionID=@SolutionID
 AND ModelGroupID=@ModelGroupID
-AND ModelID=@ModelID
 AND ParameterID=@ProductValue_Parameter 
 
 ------------------------------------- Populate #predictions table ---------------------------------
