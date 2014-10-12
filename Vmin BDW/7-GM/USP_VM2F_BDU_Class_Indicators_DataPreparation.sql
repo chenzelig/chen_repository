@@ -38,31 +38,6 @@ DECLARE  @SQL VARCHAR(MAX)=NULL
 		,@ProductValue_Parameter INT=115
 		,@DomainCornerFlow_Parameter INT=116
 
------------------------------------ Create Clustered Index -------------------------------
-
----- #ATM_GM_Indicators_RawData
-IF NOT EXISTS(SELECT
-					TableName = t.name, 
-					ClusteredIndexName = i.name
-				FROM sys.tables t
-				INNER JOIN sys.indexes i 
-				ON t.object_id = i.object_id
-				AND t.name='#ATM_GM_Indicators_RawData'
-				AND i.name IS NOT null
-			)
-CREATE CLUSTERED INDEX  ATM_GM_Indicators_RawData_I1 ON #ATM_GM_Indicators_RawData (UnitID,Test_Program,Test_Name, WW, Test_Date);
-
------- #ATM_GM_ModelingParameters
-IF NOT EXISTS(SELECT
-					TableName = t.name, 
-					ClusteredIndexName = i.name
-				FROM sys.tables t
-				INNER JOIN sys.indexes i 
-				ON t.object_id = i.object_id
-				AND t.name='#ATM_GM_ModelingParameters'
-				AND i.name IS NOT null
-			)
-CREATE CLUSTERED INDEX  ATM_GM_ModelingParameters_I1 ON #ATM_GM_ModelingParameters (SolutionID,ModelGroupID,ModelID,FeatureID,ParameterID)
 
 ------------------------------------------ Create Tables ---------------------------------
 
@@ -76,6 +51,34 @@ CREATE TABLE #Predictions(UnitID VARCHAR(MAX),Test_Program VARCHAR(MAX),ModelID 
 
 CREATE TABLE #Actuals (UnitID VARCHAR(MAX),Test_Program VARCHAR(MAX),Test_Name VARCHAR(MAX),WW INT,Test_Date DATETIME, Feature_ActualValue FLOAT, Feature_MinValue FLOAT, Feature_Step INT, Feature_GB FLOAT
 					  ,Model_MaxValue FLOAT ,Model_NumOfSteps INT, SolutionID INT ,ModelID INT,FeatureID INT)
+
+----------------------------------- Create Clustered Index -------------------------------
+SET @FailPoint=0
+
+---- #ATM_GM_Indicators_RawData
+IF NOT EXISTS(SELECT
+				  TableName = t.name, 
+				  ClusteredIndexName = i.name
+			  FROM tempdb.sys.tables t
+			  INNER JOIN tempdb.sys.indexes i 
+			  ON t.object_id=OBJECT_ID('tempdb..#ATM_GM_Indicators_RawData')
+			  AND t.object_id = i.object_id
+			  AND i.name IS NOT null
+			)
+CREATE CLUSTERED INDEX  ATM_GM_Indicators_RawData_I1 ON #ATM_GM_Indicators_RawData (UnitID,Test_Program,Test_Name, WW, Test_Date);
+
+------ #ATM_GM_ModelingParameters
+IF NOT EXISTS(SELECT
+				  TableName = t.name, 
+				  ClusteredIndexName = i.name
+			  FROM tempdb.sys.tables t
+			  INNER JOIN tempdb.sys.indexes i 
+			  ON t.object_id=OBJECT_ID('tempdb..#ATM_GM_ModelingParameters')
+			  AND t.object_id = i.object_id
+			  AND i.name IS NOT null
+			)
+CREATE CLUSTERED INDEX  ATM_GM_ModelingParameters_I1 ON #ATM_GM_ModelingParameters (SolutionID,ModelGroupID,ModelID,FeatureID,ParameterID)
+
 --------------------------------------- select product value ---------------------------------
 SET @FailPoint=1
 

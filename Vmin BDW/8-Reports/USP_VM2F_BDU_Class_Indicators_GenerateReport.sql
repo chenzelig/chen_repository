@@ -170,8 +170,10 @@ ORDER BY IndicatorID
 SET @FailPoint=3
 
 SELECT  Res1.*
+   --  ,[vcntXbaselineMstepswpcnt]=[Vmin_CNT]*[NumOfSteps_Baseline]-[Steps_WP_CNT]
 	   ,M.[Vmin_Baseline] 
 	   ,M.[NumOfSteps_Baseline] 
+	   
 	FROM(
 		SELECT  
 				DieStructure 
