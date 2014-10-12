@@ -43,7 +43,7 @@ BEGIN TRY
 		,ID
 		,DataTable
 	into #ATM_GM_TempDataTableList
-	from [dbo].[GM_D_DataTables](nolock)
+	from [dbo].[GM_D_TempDataTable](nolock)
 	where ID in (select value from  [AdvancedBIsystem].[dbo].[UDF_GetIntTableFromList](@dataTablesStr))
 	group by ID,DataTable
 

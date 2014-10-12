@@ -1,7 +1,7 @@
 @echo off
 
-ECHO Running "\Scripts\dropScript.sql"...
-SQLCMD -S %1 -d %2 -U %3 -P %4 -b -i ".\Scripts\dropScript.sql" -o "DBObjectsMigration.log"
+ECHO Running "\Scripts\dropScript ver2.sql"...
+SQLCMD -S %1 -d %2 -U %3 -P %4 -b -i ".\Scripts\dropScript ver2.sql" -o "DBObjectsMigration.log"
 if errorlevel 1 goto :error
 
 ECHO Running "\Table\GM_D_EvaluationCalculatedFields.sql"...
@@ -41,8 +41,6 @@ ECHO Running "\Table\GM_D_EvaluationMeasures.sql"...
 SQLCMD -S %1 -d %2 -U %3 -P %4 -b -i ".\Table\GM_D_EvaluationMeasures.sql" -o "DBObjectsMigration.log"
 if errorlevel 1 goto :error
 
-
-
 ECHO Running "\Table\GM_F_ModelEvaluation.sql"...
 SQLCMD -S %1 -d %2 -U %3 -P %4 -b -i ".\Table\GM_F_ModelEvaluation.sql" -o "DBObjectsMigration.log"
 if errorlevel 1 goto :error
@@ -59,6 +57,9 @@ ECHO Running "\Functions\UDF_SolutionID_PartitionFunction.sql"...
 SQLCMD -S %1 -d %2 -U %3 -P %4 -b -i ".\Functions\UDF_SolutionID_PartitionFunction.sql" -o "DBObjectsMigration.log"
 if errorlevel 1 goto :error
 
+ECHO Running "\Functions\UDF_GetStringTableFromList_New.sql"...
+SQLCMD -S %1 -d %2 -U %3 -P %4 -b -i ".\Functions\UDF_GetStringTableFromList_New.sql" -o "DBObjectsMigration.log"
+if errorlevel 1 goto :error
 
 ECHO Running "\SP\USP_GM_EvaluationProcedure.sql"...
 SQLCMD -S %1 -d %2 -U %3 -P %4 -b -i ".\SP\USP_GM_EvaluationProcedure.sql" -o "DBObjectsMigration.log"
@@ -66,6 +67,14 @@ if errorlevel 1 goto :error
 
 ECHO Running "\SP\USP_GM_IndicatorProcedure.sql"...
 SQLCMD -S %1 -d %2 -U %3 -P %4 -b -i ".\SP\USP_GM_IndicatorProcedure.sql" -o "DBObjectsMigration.log"
+if errorlevel 1 goto :error
+
+ECHO Running "\SP\USP_GM_ModelIndicators.sql"...
+SQLCMD -S %1 -d %2 -U %3 -P %4 -b -i ".\SP\USP_GM_ModelIndicators.sql" -o "DBObjectsMigration.log"
+if errorlevel 1 goto :error
+
+ECHO Running "\SP\USP_GM_MainProcedure.sql"...
+SQLCMD -S %1 -d %2 -U %3 -P %4 -b -i ".\SP\USP_GM_MainProcedure.sql" -o "DBObjectsMigration.log"
 if errorlevel 1 goto :error
 
 :success
